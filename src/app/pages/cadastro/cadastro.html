@@ -1,0 +1,111 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-card__header">
+      <span class="eyebrow">Portal publico</span>
+      <h1>Cadastro de cliente</h1>
+      <p>Cadastre-se para agilizar seus proximos pedidos no cardapio online.</p>
+    </div>
+
+    <form class="auth-form" (submit)="submit(); $event.preventDefault()">
+      <fieldset class="fieldset">
+        <legend class="fieldset__legend">Seus dados</legend>
+
+        <div class="field">
+          <label for="name">Nome completo</label>
+          <input id="name" type="text" name="name" [(ngModel)]="form.name" placeholder="Ex: Maria Silva" />
+        </div>
+
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input id="email" type="email" name="email" [(ngModel)]="form.email" placeholder="seu@email.com" autocomplete="email" />
+        </div>
+
+        <div class="field">
+          <label for="phone">Telefone</label>
+          <input id="phone" type="tel" name="phone" [(ngModel)]="form.phone" placeholder="(11) 99999-9999" />
+        </div>
+
+        <div class="field">
+          <label for="zipCode">CEP</label>
+          <input
+            id="zipCode"
+            type="text"
+            name="zipCode"
+            [ngModel]="form.zipCode"
+            (ngModelChange)="onZipCodeInput($event)"
+            placeholder="00000-000"
+            inputmode="numeric"
+          />
+        </div>
+
+        <div class="field">
+          <label for="street">Rua</label>
+          <input id="street" type="text" name="street" [(ngModel)]="form.street" placeholder="Rua ou avenida" />
+        </div>
+
+        <div class="field">
+          <label for="number">Numero</label>
+          <input id="number" type="text" name="number" [(ngModel)]="form.number" placeholder="Ex: 123" />
+        </div>
+
+        <div class="field">
+          <label for="neighborhood">Bairro</label>
+          <input id="neighborhood" type="text" name="neighborhood" [(ngModel)]="form.neighborhood" placeholder="Seu bairro" />
+        </div>
+
+        <div class="field">
+          <label for="city">Cidade</label>
+          <input id="city" type="text" name="city" [(ngModel)]="form.city" placeholder="Cidade" />
+        </div>
+
+        <div class="field">
+          <label for="state">UF</label>
+          <input id="state" type="text" name="state" [(ngModel)]="form.state" placeholder="SP" maxlength="2" />
+        </div>
+
+        <div class="field field--wide">
+          <label for="complement">Complemento</label>
+          <input
+            id="complement"
+            type="text"
+            name="complement"
+            [(ngModel)]="form.complement"
+            placeholder="Apartamento, bloco, referencia..."
+          />
+        </div>
+
+        <div class="field">
+          <label for="password">Senha</label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            [(ngModel)]="form.password"
+            placeholder="Crie uma senha com pelo menos 8 caracteres"
+            autocomplete="new-password"
+          />
+        </div>
+      </fieldset>
+
+      @if (successMessage()) {
+        <p class="auth-form__success">{{ successMessage() }}</p>
+      }
+
+      @if (errorMessage()) {
+        <p class="auth-form__error">{{ errorMessage() }}</p>
+      }
+
+      @if (isLoadingCep()) {
+        <p class="auth-form__success">Consultando CEP...</p>
+      }
+
+      <button type="submit" class="primary-button" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Enviando...' : 'Cadastrar cliente' }}
+      </button>
+    </form>
+
+    <p class="auth-card__footer">
+      Ja tem cadastro? <a routerLink="/acesso-cliente">Entrar como cliente</a>
+    </p>
+  </div>
+</div>

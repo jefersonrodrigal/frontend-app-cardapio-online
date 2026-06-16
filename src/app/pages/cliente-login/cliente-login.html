@@ -1,0 +1,52 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-card__header">
+      <span class="eyebrow">Area do cliente</span>
+      <h1>Entrar para pedir</h1>
+      <p>Use o cadastro que voce criou para agilizar o preenchimento do seu pedido.</p>
+    </div>
+
+    <form class="auth-form" (submit)="login(); $event.preventDefault()">
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input
+          id="email"
+          type="email"
+          placeholder="seu@email.com"
+          autocomplete="email"
+          name="email"
+          [(ngModel)]="credentials.email"
+        />
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <input
+          id="password"
+          type="password"
+          placeholder="Digite sua senha"
+          autocomplete="current-password"
+          name="password"
+          [(ngModel)]="credentials.password"
+        />
+      </div>
+
+      @if (successMessage()) {
+        <p class="auth-form__success">{{ successMessage() }}</p>
+      }
+
+      @if (errorMessage()) {
+        <p class="auth-form__error">{{ errorMessage() }}</p>
+      }
+
+      <button type="submit" class="primary-button" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Entrando...' : 'Entrar como cliente' }}
+      </button>
+    </form>
+
+    <p class="auth-card__footer">
+      Ainda nao tem cadastro?
+      <a routerLink="/cadastro">Criar acesso agora</a>
+    </p>
+  </div>
+</div>

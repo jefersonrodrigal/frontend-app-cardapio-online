@@ -1,0 +1,29 @@
+<nav class="navbar">
+  <a class="navbar__brand" routerLink="/home">
+    <i class="fa fa-utensils" aria-hidden="true"></i>
+    Cardapio Online
+  </a>
+
+  <ul class="navbar__links">
+    <li>
+      <a class="navbar__link" routerLink="/home" routerLinkActive="navbar__link--active">Inicio</a>
+    </li>
+    <li>
+      <a class="navbar__link" routerLink="/acesso-cliente" routerLinkActive="navbar__link--active">Entrar</a>
+    </li>
+    <li>
+      <a class="navbar__link" routerLink="/login" routerLinkActive="navbar__link--active">Admin</a>
+    </li>
+    <li>
+      <button type="button" class="navbar__link navbar__cart" (click)="openCart()">
+        Carrinho
+        <span class="navbar__cart-count">({{ cartCount() }})</span>
+      </button>
+    </li>
+    <li>
+      <a class="navbar__link navbar__cta" routerLink="/cadastro" routerLinkActive="navbar__link--active">
+        Cadastro de cliente
+      </a>
+    </li>
+  </ul>
+</nav>
