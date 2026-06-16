@@ -617,18 +617,132 @@
         <div class="admin-section__header">
           <div>
             <h2>Integracoes</h2>
-            <p>Esta area ainda nao possui backend proprio neste projeto.</p>
+            <p>Centralize os canais externos de venda e atendimento em um unico lugar.</p>
           </div>
         </div>
 
-        <div class="integration-placeholder">
-          <i class="fa fa-plug-circle-xmark" aria-hidden="true"></i>
-          <strong>Nenhuma integracao ativa</strong>
-          <p>
-            Os cards demonstrativos foram removidos do frontend. Quando houver endpoints reais,
-            esta aba pode ser ligada ao backend da mesma forma que produtos, clientes e pedidos.
-          </p>
-        </div>
+        <nav class="integration-navbar" aria-label="Menus de integracao">
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'ifood'"
+            (click)="setIntegrationMenu('ifood')"
+          >
+            <i class="fa fa-utensils" aria-hidden="true"></i>
+            iFood
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'anotai'"
+            (click)="setIntegrationMenu('anotai')"
+          >
+            <i class="fa fa-clipboard-list" aria-hidden="true"></i>
+            Anotai
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'ubereats'"
+            (click)="setIntegrationMenu('ubereats')"
+          >
+            <i class="fa fa-motorcycle" aria-hidden="true"></i>
+            Uber Eats
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === '99food'"
+            (click)="setIntegrationMenu('99food')"
+          >
+            <i class="fa fa-bag-shopping" aria-hidden="true"></i>
+            99Food
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'aiagents'"
+            (click)="setIntegrationMenu('aiagents')"
+          >
+            <i class="fa fa-robot" aria-hidden="true"></i>
+            Agents de IA
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'whatsapp'"
+            (click)="setIntegrationMenu('whatsapp')"
+          >
+            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            WhatsApp
+          </button>
+        </nav>
+
+        @if (activeIntegrationMenu() === 'ifood') {
+          <div class="integration-placeholder">
+            <i class="fa fa-utensils" aria-hidden="true"></i>
+            <strong>iFood</strong>
+            <p>
+              Configure aqui o fluxo de sincronizacao com cardapio, pedidos e status do iFood
+              quando os endpoints estiverem disponiveis.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === 'anotai') {
+          <div class="integration-placeholder">
+            <i class="fa fa-clipboard-list" aria-hidden="true"></i>
+            <strong>Anotai</strong>
+            <p>
+              Use esta area para centralizar automacoes, captura de pedidos e integracoes
+              operacionais vindas do Anotai.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === 'whatsapp') {
+          <div class="integration-placeholder">
+            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            <strong>WhatsApp</strong>
+            <p>
+              Aqui voce podera conectar atendimento, mensagens e confirmacoes de pedido pelo
+              WhatsApp assim que a integracao for habilitada no backend.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === 'ubereats') {
+          <div class="integration-placeholder">
+            <i class="fa fa-motorcycle" aria-hidden="true"></i>
+            <strong>Uber Eats</strong>
+            <p>
+              Reserve este espaco para conectar catalogo, pedidos e atualizacoes de entrega
+              do Uber Eats quando a integracao estiver pronta.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === '99food') {
+          <div class="integration-placeholder">
+            <i class="fa fa-bag-shopping" aria-hidden="true"></i>
+            <strong>99Food</strong>
+            <p>
+              Aqui voce podera concentrar o fluxo operacional da 99Food, com sincronizacao
+              de menu, recebimento de pedidos e acompanhamento de status.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === 'aiagents') {
+          <div class="integration-placeholder">
+            <i class="fa fa-robot" aria-hidden="true"></i>
+            <strong>Agents de IA</strong>
+            <p>
+              Use esta area para conectar agentes de IA ao atendimento, automacoes de pedidos,
+              suporte ao cliente e operacoes assistidas assim que essa integracao estiver disponivel.
+            </p>
+          </div>
+        }
       </section>
     }
   </main>

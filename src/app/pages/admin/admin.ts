@@ -7,6 +7,7 @@ import { AuthService } from '../../core/auth.service';
 import { ClientDto, EstablishmentDto, OrderDto, ProductDto, ProductPayload } from '../../core/api.models';
 
 type Tab = 'estabelecimento' | 'produtos' | 'clientes' | 'pedidos' | 'integracoes';
+type IntegrationMenu = 'ifood' | 'anotai' | 'ubereats' | '99food' | 'aiagents' | 'whatsapp';
 type OrderStatus = 'pendente' | 'em_preparo' | 'em_entrega' | 'entregue' | 'cancelado';
 type OrderSource = 'whatsapp' | 'ifood' | 'site';
 
@@ -32,6 +33,7 @@ export class Admin {
   private readonly auth = inject(AuthService);
 
   protected readonly activeTab = signal<Tab>('estabelecimento');
+  protected readonly activeIntegrationMenu = signal<IntegrationMenu>('ifood');
   protected readonly showProductForm = signal(false);
   protected readonly editingProductId = signal<string | null>(null);
   protected readonly editingProductName = signal<string | null>(null);
@@ -160,6 +162,10 @@ export class Admin {
 
   protected setTab(tab: Tab): void {
     this.activeTab.set(tab);
+  }
+
+  protected setIntegrationMenu(menu: IntegrationMenu): void {
+    this.activeIntegrationMenu.set(menu);
   }
 
   protected setProductsPage(page: number): void {
