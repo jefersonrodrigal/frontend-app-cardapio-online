@@ -81,6 +81,18 @@ export class Home {
   protected readonly isRestaurantOpen = computed(() => this.checkRestaurantOpen());
   protected readonly cartCount = this.cartService.count;
   protected readonly cartTotal = this.cartService.total;
+  protected readonly cartEyebrow = computed(() =>
+    this.cartStep() === 1 ? 'Pedido' : 'Cliente e entrega',
+  );
+  protected readonly cartTitle = computed(() =>
+    this.cartStep() === 1 ? 'Meu carrinho' : 'Seus dados',
+  );
+  protected readonly itemsStepClass = computed(() =>
+    this.cartStep() === 1 ? 'cart-modal__step cart-modal__step--active' : 'cart-modal__step',
+  );
+  protected readonly dataStepClass = computed(() =>
+    this.cartStep() === 2 ? 'cart-modal__step cart-modal__step--active' : 'cart-modal__step',
+  );
 
   constructor() {
     effect(() => {

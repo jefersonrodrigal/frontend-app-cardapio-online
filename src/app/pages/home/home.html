@@ -246,19 +246,17 @@
       <section class="cart-modal" (click)="$event.stopPropagation()">
         <div class="cart-modal__header">
           <div>
-            <span class="section__eyebrow">
-              {{ cartStep() === 1 ? 'Pedido' : 'Cliente e entrega' }}
-            </span>
-            <h2>{{ cartStep() === 1 ? 'Meu carrinho' : 'Seus dados' }}</h2>
+            <span class="section__eyebrow">{{ cartEyebrow() }}</span>
+            <h2>{{ cartTitle() }}</h2>
           </div>
           <button type="button" class="cart-modal__close" (click)="closeCart()">Fechar</button>
         </div>
 
         <div class="cart-modal__steps">
-          <span [ngClass]="cartStep() === 1 ? 'cart-modal__step cart-modal__step--active' : 'cart-modal__step'">
+          <span [class]="itemsStepClass()">
             1. Itens
           </span>
-          <span [ngClass]="cartStep() === 2 ? 'cart-modal__step cart-modal__step--active' : 'cart-modal__step'">
+          <span [class]="dataStepClass()">
             2. Dados
           </span>
         </div>
