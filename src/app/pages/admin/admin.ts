@@ -1,15 +1,27 @@
 import { CurrencyPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { ClientDto, EstablishmentDto, OrderDto, ProductDto, ProductPayload } from '../../core/api.models';
+import {
+  ClientDto,
+  EstablishmentDto,
+  InventoryMovementDto,
+  InventoryMovementPayload,
+  InventoryProductDto,
+  OrderDto,
+  ProductDto,
+  ProductPayload,
+} from '../../core/api.models';
 
-type Tab = 'estabelecimento' | 'produtos' | 'clientes' | 'pedidos' | 'integracoes';
+type Tab = 'estabelecimento' | 'produtos' | 'estoque' | 'clientes' | 'pedidos' | 'integracoes';
 type IntegrationMenu = 'ifood' | 'anotai' | 'ubereats' | '99food' | 'aiagents' | 'whatsapp';
 type OrderStatus = 'pendente' | 'em_preparo' | 'em_entrega' | 'entregue' | 'cancelado';
 type OrderSource = 'whatsapp' | 'ifood' | 'site';
+type InventoryFilter = 'all' | 'low' | 'out' | 'untracked';
+type InventoryMovementType = 'entrada' | 'perda' | 'ajuste';
 
 interface Product extends ProductDto {
   image: string;
@@ -18,6 +30,7 @@ interface Product extends ProductDto {
 interface Client extends ClientDto {}
 
 const PRODUCTS_PER_PAGE = 5;
+const INVENTORY_PER_PAGE = 8;
 const CLIENTS_PER_PAGE = 5;
 const ORDERS_PER_PAGE = 5;
 
@@ -39,17 +52,26 @@ export class Admin {
   protected readonly editingProductName = signal<string | null>(null);
   protected readonly estSaved = signal(false);
   protected readonly prodSaved = signal(false);
+  protected readonly inventorySaved = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly isLoadingEstablishment = signal(false);
   protected readonly isLoadingProducts = signal(false);
+  protected readonly isLoadingInventory = signal(false);
+  protected readonly isLoadingInventoryMovements = signal(false);
   protected readonly isLoadingClients = signal(false);
   protected readonly isLoadingOrders = signal(false);
 
   protected readonly productsPage = signal(1);
+  protected readonly inventoryPage = signal(1);
   protected readonly clientsPage = signal(1);
   protected readonly ordersPage = signal(1);
+  protected readonly inventoryFilter = signal<InventoryFilter>('all');
+  protected readonly showInventoryMovementForm = signal(false);
+  protected readonly selectedInventoryProductName = signal<string | null>(null);
 
   protected readonly products = signal<Product[]>([]);
+  protected readonly inventoryProducts = signal<InventoryProductDto[]>([]);
+  protected readonly inventoryMovements = signal<InventoryMovementDto[]>([]);
   protected readonly clients = signal<Client[]>([]);
   protected readonly orders = signal<OrderDto[]>([]);
 
@@ -70,6 +92,54 @@ export class Admin {
     return {
       start: (page - 1) * PRODUCTS_PER_PAGE + 1,
       end: Math.min(page * PRODUCTS_PER_PAGE, total),
+      total,
+    };
+  });
+
+  protected readonly filteredInventoryProducts = computed(() => {
+    const filter = this.inventoryFilter();
+    const products = this.inventoryProducts();
+
+    if (filter === 'low') {
+      return products.filter((product) => product.stockStatus === 'low');
+    }
+
+    if (filter === 'out') {
+      return products.filter((product) => product.stockStatus === 'out');
+    }
+
+    if (filter === 'untracked') {
+      return products.filter((product) => product.stockStatus === 'untracked');
+    }
+
+    return products;
+  });
+  protected readonly trackedInventoryCount = computed(() =>
+    this.inventoryProducts().filter((product) => product.trackInventory).length,
+  );
+  protected readonly lowInventoryCount = computed(() =>
+    this.inventoryProducts().filter((product) => product.stockStatus === 'low').length,
+  );
+  protected readonly outInventoryCount = computed(() =>
+    this.inventoryProducts().filter((product) => product.stockStatus === 'out').length,
+  );
+  protected readonly totalInventoryPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredInventoryProducts().length / INVENTORY_PER_PAGE)),
+  );
+  protected readonly paginatedInventoryProducts = computed(() => {
+    const page = this.inventoryPage();
+    return this.filteredInventoryProducts().slice((page - 1) * INVENTORY_PER_PAGE, page * INVENTORY_PER_PAGE);
+  });
+  protected readonly inventoryPageNumbers = computed(() =>
+    Array.from({ length: this.totalInventoryPages() }, (_, i) => i + 1),
+  );
+  protected readonly inventoryRange = computed(() => {
+    const total = this.filteredInventoryProducts().length;
+    if (total === 0) return { start: 0, end: 0, total: 0 };
+    const page = this.inventoryPage();
+    return {
+      start: (page - 1) * INVENTORY_PER_PAGE + 1,
+      end: Math.min(page * INVENTORY_PER_PAGE, total),
       total,
     };
   });
@@ -151,11 +221,24 @@ export class Admin {
     price: 0,
     category: 'hamburguer',
     image: '',
+    trackInventory: false,
+    stockQuantity: 0,
+    lowStockThreshold: 0,
+  };
+
+  protected inventoryForm = {
+    productId: '',
+    type: 'entrada' as InventoryMovementType,
+    quantity: 0,
+    newQuantity: 0,
+    reason: '',
   };
 
   constructor() {
     this.loadEstablishment();
     this.loadProducts();
+    this.loadInventory();
+    this.loadInventoryMovements();
     this.loadClients();
     this.loadOrders();
   }
@@ -170,6 +253,15 @@ export class Admin {
 
   protected setProductsPage(page: number): void {
     this.productsPage.set(page);
+  }
+
+  protected setInventoryPage(page: number): void {
+    this.inventoryPage.set(page);
+  }
+
+  protected setInventoryFilter(filter: InventoryFilter): void {
+    this.inventoryFilter.set(filter);
+    this.inventoryPage.set(1);
   }
 
   protected setClientsPage(page: number): void {
@@ -198,8 +290,8 @@ export class Admin {
         this.errorMessage.set('');
         window.setTimeout(() => this.estSaved.set(false), 3000);
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel salvar os dados do estabelecimento.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel salvar os dados do estabelecimento.'));
       },
     });
   }
@@ -224,8 +316,8 @@ export class Admin {
         this.errorMessage.set('');
         input.value = '';
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel enviar a logo selecionada.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel enviar a logo selecionada.'));
       },
     });
   }
@@ -233,7 +325,16 @@ export class Admin {
   protected openAddProduct(): void {
     this.editingProductId.set(null);
     this.editingProductName.set(null);
-    this.prodForm = { name: '', description: '', price: 0, category: 'hamburguer', image: '' };
+    this.prodForm = {
+      name: '',
+      description: '',
+      price: 0,
+      category: 'hamburguer',
+      image: '',
+      trackInventory: false,
+      stockQuantity: 0,
+      lowStockThreshold: 0,
+    };
     this.showProductForm.set(true);
   }
 
@@ -246,6 +347,9 @@ export class Admin {
       price: product.price,
       category: product.category,
       image: product.image,
+      trackInventory: product.trackInventory,
+      stockQuantity: product.stockQuantity,
+      lowStockThreshold: product.lowStockThreshold,
     };
     this.showProductForm.set(true);
   }
@@ -261,6 +365,9 @@ export class Admin {
       price: this.prodForm.price,
       category: this.prodForm.category,
       imageUrl: this.prodForm.image,
+      trackInventory: this.prodForm.trackInventory,
+      stockQuantity: Math.max(0, Number(this.prodForm.stockQuantity) || 0),
+      lowStockThreshold: Math.max(0, Number(this.prodForm.lowStockThreshold) || 0),
     };
 
     const editingId = this.editingProductId();
@@ -275,9 +382,11 @@ export class Admin {
         window.setTimeout(() => this.prodSaved.set(false), 3000);
         this.cancelProductForm();
         this.loadProducts();
+        this.loadInventory();
+        this.loadInventoryMovements();
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel salvar o produto.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel salvar o produto.'));
       },
     });
   }
@@ -302,8 +411,8 @@ export class Admin {
         this.errorMessage.set('');
         input.value = '';
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel enviar a imagem selecionada.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel enviar a imagem selecionada.'));
       },
     });
   }
@@ -313,9 +422,10 @@ export class Admin {
       next: () => {
         this.errorMessage.set('');
         this.loadProducts();
+        this.loadInventory();
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel excluir o produto.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel excluir o produto.'));
       },
     });
   }
@@ -324,6 +434,63 @@ export class Admin {
     this.showProductForm.set(false);
     this.editingProductId.set(null);
     this.editingProductName.set(null);
+  }
+
+  protected openInventoryMovement(product: InventoryProductDto, type: InventoryMovementType = 'entrada'): void {
+    if (!product.trackInventory) {
+      this.errorMessage.set('Ative o controle de estoque no cadastro do produto antes de movimentar.');
+      this.setTab('produtos');
+      return;
+    }
+
+    this.selectedInventoryProductName.set(product.name);
+    this.inventoryForm = {
+      productId: product.id,
+      type,
+      quantity: type === 'ajuste' ? 0 : 1,
+      newQuantity: product.stockQuantity,
+      reason: '',
+    };
+    this.showInventoryMovementForm.set(true);
+  }
+
+  protected cancelInventoryMovementForm(): void {
+    this.showInventoryMovementForm.set(false);
+    this.selectedInventoryProductName.set(null);
+    this.inventoryForm = { productId: '', type: 'entrada', quantity: 0, newQuantity: 0, reason: '' };
+  }
+
+  protected saveInventoryMovement(): void {
+    if (!this.inventoryForm.productId) {
+      this.errorMessage.set('Selecione um produto para movimentar.');
+      return;
+    }
+
+    const payload: InventoryMovementPayload = {
+      productId: this.inventoryForm.productId,
+      type: this.inventoryForm.type,
+      quantity: Math.max(0, Number(this.inventoryForm.quantity) || 0),
+      newQuantity:
+        this.inventoryForm.type === 'ajuste'
+          ? Math.max(0, Number(this.inventoryForm.newQuantity) || 0)
+          : null,
+      reason: this.inventoryForm.reason,
+    };
+
+    this.api.createInventoryMovement(payload).subscribe({
+      next: () => {
+        this.inventorySaved.set(true);
+        this.errorMessage.set('');
+        window.setTimeout(() => this.inventorySaved.set(false), 3000);
+        this.cancelInventoryMovementForm();
+        this.loadProducts();
+        this.loadInventory();
+        this.loadInventoryMovements();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel registrar a movimentacao.'));
+      },
+    });
   }
 
   protected setFilterDate(date: string): void {
@@ -349,8 +516,8 @@ export class Admin {
         this.errorMessage.set('');
         this.loadOrders();
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel avancar o status do pedido.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel avancar o status do pedido.'));
       },
     });
   }
@@ -360,9 +527,11 @@ export class Admin {
       next: () => {
         this.errorMessage.set('');
         this.loadOrders();
+        this.loadInventory();
+        this.loadInventoryMovements();
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel cancelar o pedido.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel cancelar o pedido.'));
       },
     });
   }
@@ -427,6 +596,57 @@ export class Admin {
     return icons[normalizedSource];
   }
 
+  protected inventoryStatusLabel(status: string): string {
+    const normalizedStatus = this.normalizeStockStatus(status);
+    const labels: Record<string, string> = {
+      untracked: 'Sem controle',
+      available: 'Disponivel',
+      low: 'Estoque baixo',
+      out: 'Esgotado',
+    };
+    return labels[normalizedStatus];
+  }
+
+  protected inventoryStatusClass(status: string): string {
+    const classes: Record<string, string> = {
+      untracked: 'source-badge source-badge--site',
+      available: 'order-status order-status--entregue',
+      low: 'order-status order-status--pendente',
+      out: 'order-status order-status--cancelado',
+    };
+    return classes[this.normalizeStockStatus(status)];
+  }
+
+  protected inventoryFilterClass(filter: InventoryFilter): string {
+    return this.inventoryFilter() === filter ? 'inventory-filter inventory-filter--active' : 'inventory-filter';
+  }
+
+  protected movementTypeLabel(type: string): string {
+    const normalizedType = type.toLowerCase();
+    const labels: Record<string, string> = {
+      entrada: 'Entrada',
+      venda: 'Venda',
+      cancelamento: 'Cancelamento',
+      ajuste: 'Ajuste',
+      perda: 'Perda',
+    };
+    return labels[normalizedType] ?? type;
+  }
+
+  protected movementTypeClass(type: string): string {
+    const normalizedType = type.toLowerCase();
+
+    if (normalizedType === 'entrada' || normalizedType === 'cancelamento') {
+      return 'order-status order-status--entregue';
+    }
+
+    if (normalizedType === 'venda' || normalizedType === 'perda') {
+      return 'order-status order-status--cancelado';
+    }
+
+    return 'order-status order-status--em-preparo';
+  }
+
   protected logout(): void {
     this.auth.logout();
     this.router.navigate(['/login']);
@@ -440,8 +660,8 @@ export class Admin {
         this.estForm = establishment;
         this.isLoadingEstablishment.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel carregar o estabelecimento.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar o estabelecimento.'));
         this.isLoadingEstablishment.set(false);
       },
     });
@@ -461,9 +681,42 @@ export class Admin {
         this.productsPage.set(Math.min(this.productsPage(), Math.max(1, Math.ceil(result.items.length / PRODUCTS_PER_PAGE))));
         this.isLoadingProducts.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel carregar os produtos.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar os produtos.'));
         this.isLoadingProducts.set(false);
+      },
+    });
+  }
+
+  private loadInventory(): void {
+    this.isLoadingInventory.set(true);
+
+    this.api.getInventory(1, 1000).subscribe({
+      next: (result) => {
+        this.inventoryProducts.set(result.items);
+        this.inventoryPage.set(
+          Math.min(this.inventoryPage(), Math.max(1, Math.ceil(result.items.length / INVENTORY_PER_PAGE))),
+        );
+        this.isLoadingInventory.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar o estoque.'));
+        this.isLoadingInventory.set(false);
+      },
+    });
+  }
+
+  protected loadInventoryMovements(): void {
+    this.isLoadingInventoryMovements.set(true);
+
+    this.api.getInventoryMovements(undefined, 1, 20).subscribe({
+      next: (result) => {
+        this.inventoryMovements.set(result.items);
+        this.isLoadingInventoryMovements.set(false);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar as movimentacoes de estoque.'));
+        this.isLoadingInventoryMovements.set(false);
       },
     });
   }
@@ -477,8 +730,8 @@ export class Admin {
         this.clientsPage.set(Math.min(this.clientsPage(), Math.max(1, Math.ceil(result.items.length / CLIENTS_PER_PAGE))));
         this.isLoadingClients.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel carregar os clientes.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar os clientes.'));
         this.isLoadingClients.set(false);
       },
     });
@@ -493,8 +746,8 @@ export class Admin {
         this.ordersPage.set(Math.min(this.ordersPage(), Math.max(1, Math.ceil(result.items.length / ORDERS_PER_PAGE))));
         this.isLoadingOrders.set(false);
       },
-      error: () => {
-        this.errorMessage.set('Nao foi possivel carregar os pedidos.');
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar os pedidos.'));
         this.isLoadingOrders.set(false);
       },
     });
@@ -528,5 +781,55 @@ export class Admin {
       default:
         return 'site';
     }
+  }
+
+  private normalizeStockStatus(status: string): string {
+    const normalized = status.toLowerCase();
+    return ['untracked', 'available', 'low', 'out'].includes(normalized) ? normalized : 'available';
+  }
+
+  private getApiErrorMessage(error: HttpErrorResponse, fallback: string): string {
+    const details = this.getApiErrorDetails(error);
+
+    if (!details) {
+      return fallback;
+    }
+
+    return `${fallback} ${details}`;
+  }
+
+  private getApiErrorDetails(error: HttpErrorResponse): string {
+    const payload = error.error as { error?: string; errors?: { propertyName?: string; errorMessage?: string }[] } | null;
+    const backendMessage = payload?.error || this.getValidationErrorMessage(payload?.errors);
+
+    if (error.status === 0) {
+      return 'Status 0: nao foi possivel conectar na API. Verifique se o backend esta rodando e se o CORS permite esta origem.';
+    }
+
+    if (backendMessage) {
+      return `Status ${error.status}: ${backendMessage}`;
+    }
+
+    const statusMessages: Record<number, string> = {
+      400: 'requisicao invalida. Confira os dados enviados.',
+      401: 'nao autorizado. Faca login novamente para enviar o token administrativo.',
+      403: 'acesso negado para este usuario.',
+      404: 'endpoint ou recurso nao encontrado. Verifique se a API foi reiniciada com a versao mais recente.',
+      409: 'conflito de dados. Recarregue a tela e tente novamente.',
+      422: 'regra de negocio recusou a operacao.',
+      500: 'erro interno na API. Veja o log do backend para o detalhe tecnico.',
+    };
+
+    return `Status ${error.status}: ${(statusMessages[error.status] ?? error.statusText) || 'erro inesperado na API.'}`;
+  }
+
+  private getValidationErrorMessage(errors?: { propertyName?: string; errorMessage?: string }[]): string {
+    if (!errors?.length) {
+      return '';
+    }
+
+    return errors
+      .map((item) => [item.propertyName, item.errorMessage].filter(Boolean).join(': '))
+      .join('; ');
   }
 }

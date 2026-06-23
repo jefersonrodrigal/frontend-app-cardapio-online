@@ -27,6 +27,12 @@
       Produtos
     </button>
     <button type="button" class="admin-tab"
+      [class.admin-tab--active]="activeTab() === 'estoque'"
+      (click)="setTab('estoque')">
+      <i class="fa fa-boxes-stacked" aria-hidden="true"></i>
+      Estoque
+    </button>
+    <button type="button" class="admin-tab"
       [class.admin-tab--active]="activeTab() === 'clientes'"
       (click)="setTab('clientes')">
       <i class="fa fa-users" aria-hidden="true"></i>
@@ -209,6 +215,32 @@
                   <input id="prod-price" type="number" name="prodPrice" [(ngModel)]="prodForm.price"
                     step="0.01" min="0" placeholder="0,00" />
                 </div>
+                <div class="field field--wide">
+                  <label class="stock-toggle" for="prod-track-inventory">
+                    <input
+                      id="prod-track-inventory"
+                      type="checkbox"
+                      name="prodTrackInventory"
+                      [(ngModel)]="prodForm.trackInventory"
+                    />
+                    <span>
+                      Controlar estoque deste produto
+                      <small>Produtos sem controle continuam sempre disponiveis no cardapio.</small>
+                    </span>
+                  </label>
+                </div>
+                @if (prodForm.trackInventory) {
+                  <div class="field">
+                    <label for="prod-stock-quantity">Estoque atual</label>
+                    <input id="prod-stock-quantity" type="number" name="prodStockQuantity"
+                      [(ngModel)]="prodForm.stockQuantity" min="0" step="1" placeholder="0" />
+                  </div>
+                  <div class="field">
+                    <label for="prod-low-stock-threshold">Alerta de estoque baixo</label>
+                    <input id="prod-low-stock-threshold" type="number" name="prodLowStockThreshold"
+                      [(ngModel)]="prodForm.lowStockThreshold" min="0" step="1" placeholder="0" />
+                  </div>
+                }
                 <div class="field">
                   <label for="prod-image">URL da imagem</label>
                   <input id="prod-image" type="text" name="prodImage" [(ngModel)]="prodForm.image"
@@ -288,6 +320,12 @@
                   <span class="product-item__price">
                     {{ product.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
                   </span>
+                  <span [class]="inventoryStatusClass(product.stockStatus)">
+                    {{ inventoryStatusLabel(product.stockStatus) }}
+                    @if (product.trackInventory) {
+                      - {{ product.stockQuantity }} un.
+                    }
+                  </span>
                 </div>
                 <div class="product-item__actions">
                   <button type="button" class="edit-button" (click)="editProduct(product)">
@@ -331,6 +369,255 @@
             </div>
           </div>
         }
+      </section>
+    }
+
+    @if (activeTab() === 'estoque') {
+      <section class="admin-section">
+        <div class="admin-section__header">
+          <div>
+            <h2>Estoque</h2>
+            <p>Acompanhe disponibilidade, alertas e movimentacoes dos produtos.</p>
+          </div>
+          <div class="header-stats">
+            <span class="stat-chip">
+              <i class="fa fa-boxes-stacked" aria-hidden="true"></i>
+              {{ trackedInventoryCount() }} controlados
+            </span>
+          </div>
+        </div>
+
+        @if (inventorySaved()) {
+          <div class="alert alert--success">
+            <i class="fa fa-circle-check" aria-hidden="true"></i>
+            Movimentacao registrada com sucesso!
+          </div>
+        }
+
+        <div class="orders-summary">
+          <div class="order-summary-card order-summary-card--active">
+            <div class="order-summary-card__icon">
+              <i class="fa fa-box" aria-hidden="true"></i>
+            </div>
+            <div class="order-summary-card__data">
+              <span class="order-summary-card__value">{{ trackedInventoryCount() }}</span>
+              <span class="order-summary-card__label">Com controle</span>
+            </div>
+          </div>
+          <div class="order-summary-card order-summary-card--pending">
+            <div class="order-summary-card__icon">
+              <i class="fa fa-triangle-exclamation" aria-hidden="true"></i>
+            </div>
+            <div class="order-summary-card__data">
+              <span class="order-summary-card__value">{{ lowInventoryCount() }}</span>
+              <span class="order-summary-card__label">Estoque baixo</span>
+            </div>
+          </div>
+          <div class="order-summary-card inventory-summary-card--out">
+            <div class="order-summary-card__icon">
+              <i class="fa fa-circle-xmark" aria-hidden="true"></i>
+            </div>
+            <div class="order-summary-card__data">
+              <span class="order-summary-card__value">{{ outInventoryCount() }}</span>
+              <span class="order-summary-card__label">Esgotados</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="inventory-filters" aria-label="Filtros de estoque">
+          <button type="button" [class]="inventoryFilterClass('all')" (click)="setInventoryFilter('all')">
+            Todos
+          </button>
+          <button type="button" [class]="inventoryFilterClass('low')" (click)="setInventoryFilter('low')">
+            Baixo
+          </button>
+          <button type="button" [class]="inventoryFilterClass('out')" (click)="setInventoryFilter('out')">
+            Esgotado
+          </button>
+          <button type="button" [class]="inventoryFilterClass('untracked')" (click)="setInventoryFilter('untracked')">
+            Sem controle
+          </button>
+        </div>
+
+        @if (showInventoryMovementForm()) {
+          <div class="product-form-card inventory-form-card">
+            <h3>
+              Movimentar estoque
+              @if (selectedInventoryProductName()) {
+                <span>{{ selectedInventoryProductName() }}</span>
+              }
+            </h3>
+            <form class="admin-form" (submit)="saveInventoryMovement(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="inventory-product">Produto</label>
+                  <select id="inventory-product" name="inventoryProduct" [(ngModel)]="inventoryForm.productId">
+                    <option value="">Selecione</option>
+                    @for (product of inventoryProducts(); track product.id) {
+                      @if (product.trackInventory) {
+                        <option [value]="product.id">{{ product.name }}</option>
+                      }
+                    }
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="inventory-type">Tipo</label>
+                  <select id="inventory-type" name="inventoryType" [(ngModel)]="inventoryForm.type">
+                    <option value="entrada">Entrada</option>
+                    <option value="perda">Perda</option>
+                    <option value="ajuste">Ajuste</option>
+                  </select>
+                </div>
+                @if (inventoryForm.type === 'ajuste') {
+                  <div class="field">
+                    <label for="inventory-new-quantity">Nova quantidade</label>
+                    <input id="inventory-new-quantity" type="number" name="inventoryNewQuantity"
+                      [(ngModel)]="inventoryForm.newQuantity" min="0" step="1" placeholder="0" />
+                  </div>
+                } @else {
+                  <div class="field">
+                    <label for="inventory-quantity">Quantidade</label>
+                    <input id="inventory-quantity" type="number" name="inventoryQuantity"
+                      [(ngModel)]="inventoryForm.quantity" min="1" step="1" placeholder="0" />
+                  </div>
+                }
+                <div class="field field--wide">
+                  <label for="inventory-reason">Motivo</label>
+                  <input id="inventory-reason" type="text" name="inventoryReason"
+                    [(ngModel)]="inventoryForm.reason" placeholder="Compra, perda, contagem manual..." />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="secondary-button" (click)="cancelInventoryMovementForm()">
+                  Cancelar
+                </button>
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Registrar
+                </button>
+              </div>
+            </form>
+          </div>
+        }
+
+        <div class="inventory-grid">
+          <div class="inventory-list">
+            @if (isLoadingInventory()) {
+              <p class="empty-state">Carregando estoque...</p>
+            } @else if (filteredInventoryProducts().length === 0) {
+              <p class="empty-state">Nenhum produto encontrado para este filtro.</p>
+            } @else {
+              @for (product of paginatedInventoryProducts(); track product.id) {
+                <article class="inventory-item">
+                  @if (product.imageUrl) {
+                    <img
+                      class="inventory-item__image"
+                      [src]="product.imageUrl"
+                      [alt]="product.name"
+                      width="64"
+                      height="64"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  }
+                  <div class="inventory-item__info">
+                    <span class="product-item__category">{{ product.category }}</span>
+                    <strong>{{ product.name }}</strong>
+                    <span [class]="inventoryStatusClass(product.stockStatus)">
+                      {{ inventoryStatusLabel(product.stockStatus) }}
+                    </span>
+                  </div>
+                  <div class="inventory-item__numbers">
+                    <span class="inventory-item__stock">{{ product.stockQuantity }} un.</span>
+                    <span class="inventory-item__threshold">Min. {{ product.lowStockThreshold }}</span>
+                  </div>
+                  <div class="inventory-item__actions">
+                    @if (product.trackInventory) {
+                      <button type="button" class="secondary-button" (click)="openInventoryMovement(product, 'entrada')">
+                        <i class="fa fa-plus" aria-hidden="true"></i>
+                        Entrada
+                      </button>
+                      <button type="button" class="secondary-button" (click)="openInventoryMovement(product, 'ajuste')">
+                        <i class="fa fa-sliders" aria-hidden="true"></i>
+                        Ajuste
+                      </button>
+                      <button type="button" class="delete-button" (click)="openInventoryMovement(product, 'perda')">
+                        <i class="fa fa-minus" aria-hidden="true"></i>
+                        Perda
+                      </button>
+                    } @else {
+                      <button type="button" class="secondary-button" (click)="setTab('produtos')">
+                        Configurar
+                      </button>
+                    }
+                  </div>
+                </article>
+              }
+            }
+
+            @if (totalInventoryPages() > 1) {
+              <div class="pagination">
+                <span class="pagination__info">
+                  Mostrando {{ inventoryRange().start }}-{{ inventoryRange().end }}
+                  de {{ inventoryRange().total }} produtos
+                </span>
+                <div class="pagination__controls">
+                  <button type="button" class="pagination__btn"
+                    [disabled]="inventoryPage() === 1"
+                    (click)="setInventoryPage(inventoryPage() - 1)">
+                    <i class="fa fa-chevron-left" aria-hidden="true"></i>
+                  </button>
+                  @for (n of inventoryPageNumbers(); track n) {
+                    <button type="button" class="pagination__btn"
+                      [class.pagination__btn--active]="inventoryPage() === n"
+                      (click)="setInventoryPage(n)">
+                      {{ n }}
+                    </button>
+                  }
+                  <button type="button" class="pagination__btn"
+                    [disabled]="inventoryPage() === totalInventoryPages()"
+                    (click)="setInventoryPage(inventoryPage() + 1)">
+                    <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          <aside class="movement-panel">
+            <div class="movement-panel__header">
+              <h3>Movimentacoes recentes</h3>
+              <button type="button" class="secondary-button" (click)="loadInventoryMovements()">
+                <i class="fa fa-rotate" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            @if (isLoadingInventoryMovements()) {
+              <p class="empty-state">Carregando movimentacoes...</p>
+            } @else if (inventoryMovements().length === 0) {
+              <p class="empty-state">Nenhuma movimentacao registrada.</p>
+            } @else {
+              <div class="movement-list">
+                @for (movement of inventoryMovements(); track movement.id) {
+                  <article class="movement-item">
+                    <div class="movement-item__top">
+                      <span [class]="movementTypeClass(movement.type)">
+                        {{ movementTypeLabel(movement.type) }}
+                      </span>
+                      <span class="movement-item__date">{{ movement.createdAt }}</span>
+                    </div>
+                    <strong>{{ movement.productName }}</strong>
+                    <p>{{ movement.reason }}</p>
+                    <span class="movement-item__balance">
+                      {{ movement.balanceBefore }} -> {{ movement.balanceAfter }}
+                      ({{ movement.quantity }} un.)
+                    </span>
+                  </article>
+                }
+              </div>
+            }
+          </aside>
+        </div>
       </section>
     }
 

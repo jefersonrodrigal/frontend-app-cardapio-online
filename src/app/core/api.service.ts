@@ -6,6 +6,9 @@ import {
   CreateClientPayload,
   CreateOrderPayload,
   EstablishmentDto,
+  InventoryMovementDto,
+  InventoryMovementPayload,
+  InventoryProductDto,
   LoginRequest,
   LoginResponse,
   OrderDto,
@@ -54,6 +57,34 @@ export class ApiService {
 
   deleteProduct(id: string) {
     return this.http.delete<void>(`${this.baseUrl}/Products/${id}`);
+  }
+
+  getInventory(page: number, pageSize: number, status?: string, search?: string) {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    return this.http.get<PaginatedResult<InventoryProductDto>>(`${this.baseUrl}/Inventory`, { params });
+  }
+
+  getInventoryMovements(productId?: string, page = 1, pageSize = 20) {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+
+    if (productId) {
+      params = params.set('productId', productId);
+    }
+
+    return this.http.get<PaginatedResult<InventoryMovementDto>>(`${this.baseUrl}/Inventory/movements`, { params });
+  }
+
+  createInventoryMovement(payload: InventoryMovementPayload) {
+    return this.http.post<InventoryProductDto>(`${this.baseUrl}/Inventory/movements`, payload);
   }
 
   getClients(page: number, pageSize: number, search?: string) {

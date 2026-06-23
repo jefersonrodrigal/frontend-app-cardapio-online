@@ -6,6 +6,8 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  trackInventory: boolean;
+  stockQuantity: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -15,18 +17,49 @@ export class CartService {
   readonly count = computed(() => this.items().reduce((sum, item) => sum + item.quantity, 0));
   readonly total = computed(() => this.items().reduce((sum, item) => sum + item.price * item.quantity, 0));
 
-  add(item: ProductDto): void {
+  add(item: ProductDto): boolean {
+    if (item.trackInventory && item.stockQuantity <= 0) {
+      return false;
+    }
+
+    let added = false;
+
     this.items.update((currentCart) => {
       const existingItem = currentCart.find((cartItem) => cartItem.id === item.id);
 
       if (existingItem) {
+        if (item.trackInventory && existingItem.quantity >= item.stockQuantity) {
+          return currentCart;
+        }
+
+        added = true;
         return currentCart.map((cartItem) =>
-          cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem,
+          cartItem.id === item.id
+            ? {
+                ...cartItem,
+                quantity: cartItem.quantity + 1,
+                trackInventory: item.trackInventory,
+                stockQuantity: item.stockQuantity,
+              }
+            : cartItem,
         );
       }
 
-      return [...currentCart, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
+      added = true;
+      return [
+        ...currentCart,
+        {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          trackInventory: item.trackInventory,
+          stockQuantity: item.stockQuantity,
+        },
+      ];
     });
+
+    return added;
   }
 
   remove(productId: string): void {

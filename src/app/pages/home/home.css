@@ -193,6 +193,14 @@
   transform: translateY(-4px);
 }
 
+.menu-card--unavailable {
+  filter: grayscale(0.25);
+}
+
+.menu-card--unavailable .menu-card__image {
+  opacity: 0.72;
+}
+
 .menu-card__media {
   aspect-ratio: 16 / 10;
   overflow: hidden;
@@ -253,6 +261,8 @@
 
 .menu-card__meta {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   justify-content: flex-start;
 }
 
@@ -273,6 +283,32 @@
   background: #eff6ff;
   border-color: #bfdbfe;
   color: #0369a1;
+}
+
+.menu-card__stock {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 0.38rem 0.65rem;
+  text-transform: uppercase;
+}
+
+.menu-card__stock--available,
+.menu-card__stock--untracked {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.menu-card__stock--low {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.menu-card__stock--out {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .menu-card__content h3 {
@@ -363,9 +399,15 @@
     box-shadow 160ms ease;
 }
 
-.cart-action:hover {
+.cart-action:hover:not(:disabled) {
   box-shadow: 0 14px 24px rgb(24 24 27 / 0.2);
   transform: translateY(-1px);
+}
+
+.cart-action:disabled {
+  background: #a1a1aa;
+  cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .cart-action span {
@@ -405,7 +447,7 @@
   justify-content: center;
   padding: 1rem;
   position: fixed;
-  z-index: 20;
+  z-index: 80;
 }
 
 .cart-modal {
@@ -548,8 +590,13 @@
   width: 2rem;
 }
 
-.qty-button:hover {
+.qty-button:hover:not(:disabled) {
   background: #e4e4e7;
+}
+
+.qty-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 .qty-value {
@@ -648,14 +695,17 @@
 
 .toast {
   background: var(--toast-color, #15803d);
-  border-radius: 999px;
+  border-radius: 1rem;
   box-shadow: 0 16px 40px rgb(0 0 0 / 0.22);
   color: #fff;
+  line-height: 1.35;
+  max-width: min(28rem, calc(100vw - 2rem));
+  overflow-wrap: anywhere;
   padding: 0.9rem 1.2rem;
   position: fixed;
   right: 1rem;
-  top: 1rem;
-  z-index: 30;
+  top: calc(4.5rem + env(safe-area-inset-top));
+  z-index: 90;
 }
 
 @media (max-width: 720px) {

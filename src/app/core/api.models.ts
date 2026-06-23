@@ -25,6 +25,11 @@ export interface ProductDto {
   price: number;
   category: string;
   imageUrl: string;
+  trackInventory: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  isAvailable: boolean;
+  stockStatus: string;
 }
 
 export interface ClientDto {
@@ -75,6 +80,7 @@ export interface ClientLoginPayload {
 }
 
 export interface OrderItemDto {
+  productId: string | null;
   productName: string;
   quantity: number;
   unitPrice: number;
@@ -102,6 +108,9 @@ export interface ProductPayload {
   price: number;
   category: string;
   imageUrl: string;
+  trackInventory: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
 }
 
 export interface LoginRequest {
@@ -131,4 +140,37 @@ export interface CreateOrderPayload {
   source: string;
   items: CreateOrderItemPayload[];
   note?: string | null;
+}
+
+export interface InventoryProductDto {
+  id: string;
+  name: string;
+  category: string;
+  imageUrl: string;
+  trackInventory: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  isAvailable: boolean;
+  stockStatus: string;
+}
+
+export interface InventoryMovementDto {
+  id: string;
+  productId: string;
+  productName: string;
+  type: string;
+  quantity: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  reason: string;
+  orderId: string | null;
+  createdAt: string;
+}
+
+export interface InventoryMovementPayload {
+  productId: string;
+  type: string;
+  quantity: number;
+  newQuantity?: number | null;
+  reason: string;
 }

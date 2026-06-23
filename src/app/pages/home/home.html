@@ -77,7 +77,7 @@
       } @else {
         <div class="menu-grid">
           @for (item of paginatedBurgers(); track item.id) {
-            <article class="menu-card">
+            <article class="menu-card" [ngClass]="canAddProduct(item) ? '' : 'menu-card--unavailable'">
               <div class="menu-card__media">
                 <span class="menu-card__badge">Destaque</span>
                 <img
@@ -95,6 +95,7 @@
                 <div class="menu-card__body">
                   <div class="menu-card__meta">
                     <span class="menu-card__tag">Hamburguer artesanal</span>
+                    <span [class]="stockBadgeClass(item)">{{ stockLabel(item) }}</span>
                   </div>
                   <h3>{{ item.name }}</h3>
                   <p class="menu-card__price">
@@ -105,9 +106,14 @@
 
                 <div class="menu-card__footer">
                   <span class="menu-card__cta-copy">Peca agora</span>
-                  <button type="button" class="cart-action" (click)="addToCart(item)">
+                  <button
+                    type="button"
+                    class="cart-action"
+                    [disabled]="!canAddProduct(item)"
+                    (click)="addToCart(item)"
+                  >
                     <i class="fa fa-cart-plus" aria-hidden="true"></i>
-                    <span>Adicionar</span>
+                    <span>{{ canAddProduct(item) ? 'Adicionar' : 'Esgotado' }}</span>
                   </button>
                 </div>
               </div>
@@ -165,7 +171,10 @@
       } @else {
         <div class="menu-grid">
           @for (item of paginatedDrinks(); track item.id) {
-            <article class="menu-card menu-card--drink">
+            <article
+              class="menu-card menu-card--drink"
+              [ngClass]="canAddProduct(item) ? '' : 'menu-card--unavailable'"
+            >
               <div class="menu-card__media menu-card__media--drink">
                 <span class="menu-card__badge menu-card__badge--drink">Gelada</span>
                 <img
@@ -183,6 +192,7 @@
                 <div class="menu-card__body">
                   <div class="menu-card__meta">
                     <span class="menu-card__tag menu-card__tag--drink">Bebida gelada</span>
+                    <span [class]="stockBadgeClass(item)">{{ stockLabel(item) }}</span>
                   </div>
                   <h3>{{ item.name }}</h3>
                   <p class="menu-card__price">
@@ -193,9 +203,14 @@
 
                 <div class="menu-card__footer">
                   <span class="menu-card__cta-copy">Adicione ao combo</span>
-                  <button type="button" class="cart-action" (click)="addToCart(item)">
+                  <button
+                    type="button"
+                    class="cart-action"
+                    [disabled]="!canAddProduct(item)"
+                    (click)="addToCart(item)"
+                  >
                     <i class="fa fa-cart-plus" aria-hidden="true"></i>
-                    <span>Adicionar</span>
+                    <span>{{ canAddProduct(item) ? 'Adicionar' : 'Esgotado' }}</span>
                   </button>
                 </div>
               </div>
@@ -287,6 +302,7 @@
                       <button
                         type="button"
                         class="qty-button"
+                        [disabled]="isCartItemAtStockLimit(item)"
                         (click)="incrementInCart(item.id)"
                         aria-label="Aumentar quantidade de {{ item.name }}"
                       >+</button>
