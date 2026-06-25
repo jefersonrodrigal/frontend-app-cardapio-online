@@ -27,6 +27,12 @@
       Produtos
     </button>
     <button type="button" class="admin-tab"
+      [class.admin-tab--active]="activeTab() === 'categorias'"
+      (click)="setTab('categorias')">
+      <i class="fa fa-tags" aria-hidden="true"></i>
+      Categorias
+    </button>
+    <button type="button" class="admin-tab"
       [class.admin-tab--active]="activeTab() === 'clientes'"
       (click)="setTab('clientes')">
       <i class="fa fa-users" aria-hidden="true"></i>
@@ -191,12 +197,9 @@
                 <div class="field">
                   <label for="prod-category">Categoria</label>
                   <select id="prod-category" name="prodCategory" [(ngModel)]="prodForm.category">
-                    <option value="hamburguer">Hamburguer</option>
-                    <option value="pizza">Pizza</option>
-                    <option value="bebida">Bebida</option>
-                    <option value="sobremesa">Sobremesa</option>
-                    <option value="porcao">Porcao</option>
-                    <option value="outro">Outro</option>
+                    @for (cat of categories(); track cat.id) {
+                      <option [value]="cat.slug">{{ cat.name }}</option>
+                    }
                   </select>
                 </div>
                 <div class="field field--wide">
@@ -280,7 +283,7 @@
                   />
                 }
                 <div class="product-item__info">
-                  <span class="product-item__category">{{ product.category }}</span>
+                  <span class="product-item__category">{{ getCategoryName(product.category) }}</span>
                   <strong class="product-item__name">{{ product.name }}</strong>
                   @if (product.description) {
                     <p class="product-item__description">{{ product.description }}</p>
@@ -331,6 +334,84 @@
             </div>
           </div>
         }
+      </section>
+    }
+
+    @if (activeTab() === 'categorias') {
+      <section class="admin-section">
+        <div class="admin-section__header">
+          <div>
+            <h2>Categorias</h2>
+            <p>Defina as secoes do cardapio publico. Cada categoria vira uma secao de produtos.</p>
+          </div>
+          @if (!showCategoryForm()) {
+            <button type="button" class="primary-button" (click)="openAddCategory()">
+              <i class="fa fa-plus" aria-hidden="true"></i>
+              Nova categoria
+            </button>
+          }
+        </div>
+
+        @if (catSaved()) {
+          <div class="alert alert--success">
+            <i class="fa fa-circle-check" aria-hidden="true"></i>
+            Categoria salva com sucesso!
+          </div>
+        }
+
+        @if (showCategoryForm()) {
+          <div class="product-form-card">
+            <h3>{{ editingCategoryName() ? 'Editar categoria' : 'Nova categoria' }}</h3>
+            <form class="admin-form" (submit)="saveCategory(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="cat-name">Nome</label>
+                  <input id="cat-name" type="text" name="catName" [(ngModel)]="catForm.name"
+                    placeholder="Ex: Hamburguer, Pizza, Bebida..." />
+                </div>
+                <div class="field">
+                  <label for="cat-order">Ordem de exibicao</label>
+                  <input id="cat-order" type="number" name="catOrder" [(ngModel)]="catForm.sortOrder"
+                    min="0" placeholder="1" />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="secondary-button" (click)="cancelCategoryForm()">
+                  Cancelar
+                </button>
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar categoria
+                </button>
+              </div>
+            </form>
+          </div>
+        }
+
+        <div class="product-list">
+          @if (categories().length === 0) {
+            <p class="empty-state">Nenhuma categoria cadastrada ainda.</p>
+          } @else {
+            @for (cat of categories(); track cat.id) {
+              <article class="product-item">
+                <div class="product-item__info">
+                  <strong class="product-item__name">{{ cat.name }}</strong>
+                  <span class="product-item__category">slug: {{ cat.slug }} &bull; ordem: {{ cat.sortOrder }}</span>
+                </div>
+                <div class="product-item__actions">
+                  <button type="button" class="edit-button" (click)="editCategory(cat)">
+                    <i class="fa fa-pen" aria-hidden="true"></i>
+                    Editar
+                  </button>
+                  <button type="button" class="delete-button" (click)="deleteCategoryById(cat.id)">
+                    <i class="fa fa-trash" aria-hidden="true"></i>
+                    Excluir
+                  </button>
+                </div>
+              </article>
+            }
+          }
+        </div>
       </section>
     }
 

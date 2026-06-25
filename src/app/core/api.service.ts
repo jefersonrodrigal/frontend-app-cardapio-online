@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import {
   AiAgentsIntegrationDto,
   AnotaiIntegrationDto,
+  CategoryDto,
+  CategoryPayload,
   ClientLoginPayload,
   ClientDto,
   CreateClientPayload,
@@ -113,6 +115,22 @@ export class ApiService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<UploadResponse>(`${this.baseUrl}/Uploads/image`, formData);
+  }
+
+  getCategories() {
+    return this.http.get<CategoryDto[]>(`${this.baseUrl}/Categories`);
+  }
+
+  createCategory(payload: CategoryPayload) {
+    return this.http.post<CategoryDto>(`${this.baseUrl}/Categories`, payload);
+  }
+
+  updateCategory(id: number, payload: CategoryPayload) {
+    return this.http.put<CategoryDto>(`${this.baseUrl}/Categories/${id}`, payload);
+  }
+
+  deleteCategory(id: number) {
+    return this.http.delete<void>(`${this.baseUrl}/Categories/${id}`);
   }
 
   getIntegrations() {

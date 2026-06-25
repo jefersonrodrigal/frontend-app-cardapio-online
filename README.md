@@ -1,66 +1,258 @@
-# Cardapio Online em Angular
+# Cardapio Online — Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.28.
+Aplicacao Angular para cardapio digital com painel administrativo integrado. Construida com Angular 20 standalone components, Angular Signals e comunicacao via HTTP com o backend ASP.NET Core.
 
-## Development server
+## Visao geral
 
-To start a local development server, run:
+O frontend cobre dois fluxos principais:
+
+**Cardapio publico (`/`)**
+- Exibe dados do estabelecimento (nome, logo, horarios, status aberto/fechado)
+- Renderiza secoes de produtos agrupadas por categoria, com paginacao por secao
+- Carrinho lateral com fluxo de checkout em duas etapas (itens → dados do cliente)
+- Busca de endereco via CEP (ViaCEP)
+- Acesso rapido para clientes cadastrados
+
+**Painel administrativo (`/admin`)**
+- Protegido por JWT Bearer
+- Gerenciamento de categorias (CRUD com slug auto-gerado)
+- Gerenciamento de produtos vinculados a categorias
+- Visualizacao de clientes cadastrados
+- Acompanhamento e avanco de status de pedidos
+- Configuracoes do estabelecimento com upload de logo
+- Configuracao de integracoes externas (iFood, Anotai, Uber Eats, 99Food, AI Agents, WhatsApp, Take Blip, Zenvia)
+
+## Stack tecnica
+
+- Angular `20`
+- TypeScript
+- Angular Signals (`signal`, `computed`, `effect`)
+- `HttpClient` com interceptor funcional (`withInterceptors`)
+- `FormsModule` com `[(ngModel)]`
+- SCSS / CSS puro por componente
+- `CurrencyPipe` localizado em `pt-BR`
+
+## Estrutura do projeto
+
+```text
+src/
+├─ app/
+│  ├─ core/
+│  │  ├─ api.config.ts        # URL base, isApiRequest, isProtectedApiRequest
+│  │  ├─ api.models.ts        # Interfaces TypeScript para todos os DTOs
+│  │  ├─ api.service.ts       # Servico HTTP centralizado
+│  │  ├─ auth.interceptor.ts  # Interceptor que injeta Bearer token
+│  │  ├─ auth.service.ts      # Gerenciamento do token JWT do admin
+│  │  ├─ cart.service.ts      # Estado do carrinho com Signals
+│  │  └─ client-auth.service.ts # Sessao do cliente em localStorage
+│  ├─ pages/
+│  │  ├─ admin/               # Painel administrativo
+│  │  │  ├─ admin.ts
+│  │  │  ├─ admin.html
+│  │  │  └─ admin.css
+│  │  ├─ home/                # Cardapio publico
+│  │  │  ├─ home.ts
+│  │  │  ├─ home.html
+│  │  │  └─ home.css
+│  │  ├─ login/               # Login do administrador
+│  │  ├─ client-access/       # Acesso do cliente
+│  │  └─ register/            # Cadastro do cliente
+│  ├─ app.config.ts           # Providers globais e registro do interceptor
+│  ├─ app.routes.ts           # Rotas lazy-loaded
+│  └─ app.ts
+├─ environments/
+│  ├─ environment.ts
+│  └─ environment.prod.ts
+└─ assets/
+```
+
+## Requisitos
+
+- Node.js `>=20`
+- Angular CLI `>=20`
+- Backend rodando em `http://localhost:5115` (ou conforme `environment.ts`)
+
+## Como executar localmente
 
 ```bash
+npm install
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+A aplicacao abre em `http://localhost:4200`.
 
-The original static menu was migrated to an Angular standalone application with:
-
-- menu data rendered from TypeScript
-- cart state managed with Angular signals
-- WhatsApp checkout flow
-- existing image assets preserved from the original project
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+Para build de producao:
 
 ```bash
 ng build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Os artefatos ficam em `dist/`.
 
-## Running unit tests
+## Configuracao de ambiente
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+`src/environments/environment.ts`:
 
-```bash
-ng test
+```typescript
+export const environment = {
+  production: false,
+  apiBaseUrl: 'http://localhost:5115/api'
+};
 ```
 
-## Running end-to-end tests
+Para producao, altere `environment.prod.ts` com a URL do backend em producao.
 
-For end-to-end (e2e) testing, run:
+## Autenticacao e seguranca
 
-```bash
-ng e2e
+### Admin
+
+O token JWT e armazenado em `localStorage` via `AuthService`. O interceptor `authInterceptor` injeta automaticamente `Authorization: Bearer <token>` nas requisicoes protegidas, determinadas por `isProtectedApiRequest()` em `api.config.ts`.
+
+Regras de protecao por rota:
+
+| Path | GET | POST/PUT/DELETE |
+|---|---|---|
+| `/Uploads` | protegido | protegido |
+| `/Estabelecimento` | publico | protegido |
+| `/Categories` | publico | protegido |
+| `/Products` | publico | protegido |
+| `/Clients/authenticate` | — | publico |
+| `/Clients` | protegido | publico |
+| `/Orders` | protegido | publico (POST) / protegido (PUT) |
+| `/Integrations` | protegido | protegido |
+
+Ao receber `401`, o interceptor faz logout automatico e redireciona para `/login`.
+
+### Clientes
+
+A sessao do cliente e armazenada em `localStorage` via `ClientAuthService`. Nao usa JWT; o backend retorna um `ClientDto` que e salvo diretamente.
+
+## Gerenciamento de categorias
+
+Categorias sao entidades dinamicas. O painel administrativo oferece uma aba "Categorias" com:
+
+- listagem de todas as categorias ativas ordenadas por `SortOrder`
+- formulario para criar nova categoria (nome e ordem de exibicao)
+- edicao de nome e ordem de categorias existentes
+- exclusao com feedback de erro quando ha produtos ativos vinculados
+
+O `slug` e gerado automaticamente pelo backend no momento da criacao e exibido apenas para referencia no painel.
+
+No cardapio publico, a home carrega as categorias e agrupa os produtos dinamicamente, renderizando uma secao por categoria que tenha produtos — na ordem definida pelo `SortOrder`.
+
+## Cardapio publico — secoes dinamicas
+
+A home carrega em paralelo `GET /api/Categories` e `GET /api/Products`. O `computed` `categorySections` faz o agrupamento:
+
+```
+categorias (ordenadas por SortOrder)
+  → filtra as que tem ao menos um produto
+  → cada secao exibe produtos paginados independentemente
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+A paginacao de cada secao e independente e armazenada em `Record<string, number>` por slug de categoria.
 
-## Additional Resources
+## Painel administrativo — abas
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+| Aba | Descricao |
+|---|---|
+| Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp e horario |
+| Produtos | CRUD de produtos com upload de imagem; categoria selecionada via lista dinamica |
+| Categorias | CRUD de categorias; slug auto-gerado e imutavel |
+| Clientes | Listagem somente leitura |
+| Pedidos | Acompanhamento com avanco de status e cancelamento; filtro por data |
+| Integracoes | Formularios por plataforma com toggle de ativacao e campos especificos |
+
+## Servico HTTP
+
+`ApiService` centraliza todas as chamadas HTTP. Metodos disponiveis:
+
+```typescript
+// Estabelecimento
+getEstablishment(): Observable<EstablishmentDto>
+saveEstablishment(payload): Observable<EstablishmentDto>
+
+// Categorias
+getCategories(): Observable<CategoryDto[]>
+createCategory(payload): Observable<CategoryDto>
+updateCategory(id, payload): Observable<CategoryDto>
+deleteCategory(id): Observable<void>
+
+// Produtos
+getProducts(page, pageSize, category?): Observable<PaginatedResult<ProductDto>>
+createProduct(payload): Observable<ProductDto>
+updateProduct(id, payload): Observable<ProductDto>
+deleteProduct(id): Observable<void>
+
+// Clientes
+getClients(page, pageSize, search?): Observable<PaginatedResult<ClientDto>>
+createClient(payload): Observable<ClientDto>
+authenticateClient(payload): Observable<ClientDto>
+
+// Pedidos
+getOrders(page, pageSize, date?): Observable<PaginatedResult<OrderDto>>
+advanceOrderStatus(id): Observable<OrderDto>
+cancelOrder(id): Observable<OrderDto>
+createOrder(payload): Observable<OrderDto>
+
+// Upload
+uploadImage(file): Observable<UploadResponse>
+
+// Integracoes
+getIntegrations(): Observable<IntegrationsOverviewDto>
+saveIFoodIntegration(payload): Observable<IFoodIntegrationDto>
+// ... demais providers
+```
+
+## Modelos TypeScript
+
+Todos os DTOs ficam em `src/app/core/api.models.ts`. Interfaces principais:
+
+```typescript
+interface CategoryDto {
+  id: number;
+  slug: string;
+  name: string;
+  sortOrder: number;
+}
+
+interface ProductDto {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;  // slug da categoria
+  imageUrl: string;
+}
+
+interface EstablishmentDto {
+  name: string;
+  logoUrl: string;
+  category: string;
+  address: string;
+  whatsapp: string;
+  openTime: string;
+  closeTime: string;
+}
+```
+
+## Localizacao
+
+`LOCALE_ID` esta configurado para `pt-BR` em `app.config.ts`. Pipes de moeda usam o locale brasileiro:
+
+```html
+{{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+```
+
+## Pontos de atencao
+
+- a URL do backend esta hardcoded em `environment.ts`; em producao, atualizar `environment.prod.ts`
+- o `isProtectedApiRequest` em `api.config.ts` e a fonte de verdade sobre quais rotas levam token; qualquer novo endpoint protegido precisa ser registrado la
+- o admin carrega todas as entidades no construtor (products 1000, clients 1000, orders 1000) para paginacao local; em bases grandes, considerar paginacao server-side
+
+## Sugestoes de proximos passos
+
+- adicionar testes unitarios para `ApiService`, `CartService` e computed signals criticos
+- implementar paginacao server-side no admin para grandes volumes
+- adicionar feedback visual (skeleton loaders) durante carregamento inicial do cardapio
+- proteger a rota `/admin` com um `AuthGuard` baseado em `AuthService`

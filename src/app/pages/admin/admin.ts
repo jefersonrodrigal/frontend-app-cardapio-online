@@ -7,6 +7,8 @@ import { AuthService } from '../../core/auth.service';
 import {
   AiAgentsIntegrationDto,
   AnotaiIntegrationDto,
+  CategoryDto,
+  CategoryPayload,
   ClientDto,
   EstablishmentDto,
   IFoodIntegrationDto,
@@ -20,7 +22,7 @@ import {
   ZenviaIntegrationDto,
 } from '../../core/api.models';
 
-type Tab = 'estabelecimento' | 'produtos' | 'clientes' | 'pedidos' | 'integracoes';
+type Tab = 'estabelecimento' | 'produtos' | 'categorias' | 'clientes' | 'pedidos' | 'integracoes';
 type IntegrationMenu = 'ifood' | 'anotai' | 'ubereats' | '99food' | 'aiagents' | 'whatsapp' | 'takeblip' | 'zenvia';
 type OrderStatus = 'pendente' | 'em_preparo' | 'em_entrega' | 'entregue' | 'cancelado';
 type OrderSource = 'whatsapp' | 'ifood' | 'site';
@@ -64,6 +66,13 @@ export class Admin {
   protected readonly productsPage = signal(1);
   protected readonly clientsPage = signal(1);
   protected readonly ordersPage = signal(1);
+
+  protected readonly categories = signal<CategoryDto[]>([]);
+  protected readonly showCategoryForm = signal(false);
+  protected readonly editingCategoryId = signal<number | null>(null);
+  protected readonly editingCategoryName = signal<string | null>(null);
+  protected readonly catSaved = signal(false);
+  protected catForm: CategoryPayload = { name: '', sortOrder: 1 };
 
   protected readonly products = signal<Product[]>([]);
   protected readonly clients = signal<Client[]>([]);
@@ -233,6 +242,7 @@ export class Admin {
 
   constructor() {
     this.loadEstablishment();
+    this.loadCategories();
     this.loadProducts();
     this.loadClients();
     this.loadOrders();
@@ -309,10 +319,74 @@ export class Admin {
     });
   }
 
+  protected getCategoryName(slug: string): string {
+    return this.categories().find(c => c.slug === slug)?.name ?? slug;
+  }
+
+  protected openAddCategory(): void {
+    this.editingCategoryId.set(null);
+    this.editingCategoryName.set(null);
+    const nextOrder = this.categories().length > 0
+      ? Math.max(...this.categories().map(c => c.sortOrder)) + 1
+      : 1;
+    this.catForm = { name: '', sortOrder: nextOrder };
+    this.showCategoryForm.set(true);
+  }
+
+  protected editCategory(cat: CategoryDto): void {
+    this.editingCategoryId.set(cat.id);
+    this.editingCategoryName.set(cat.name);
+    this.catForm = { name: cat.name, sortOrder: cat.sortOrder };
+    this.showCategoryForm.set(true);
+  }
+
+  protected cancelCategoryForm(): void {
+    this.showCategoryForm.set(false);
+    this.editingCategoryId.set(null);
+    this.editingCategoryName.set(null);
+  }
+
+  protected saveCategory(): void {
+    if (!this.catForm.name.trim()) return;
+
+    const editingId = this.editingCategoryId();
+    const request = editingId
+      ? this.api.updateCategory(editingId, this.catForm)
+      : this.api.createCategory(this.catForm);
+
+    request.subscribe({
+      next: () => {
+        this.catSaved.set(true);
+        this.errorMessage.set('');
+        window.setTimeout(() => this.catSaved.set(false), 3000);
+        this.cancelCategoryForm();
+        this.loadCategories();
+      },
+      error: (err) => {
+        const msg = err?.error?.message ?? 'Nao foi possivel salvar a categoria.';
+        this.errorMessage.set(msg);
+      },
+    });
+  }
+
+  protected deleteCategoryById(id: number): void {
+    this.api.deleteCategory(id).subscribe({
+      next: () => {
+        this.errorMessage.set('');
+        this.loadCategories();
+      },
+      error: (err) => {
+        const msg = err?.error?.message ?? 'Nao foi possivel excluir a categoria.';
+        this.errorMessage.set(msg);
+      },
+    });
+  }
+
   protected openAddProduct(): void {
+    const firstSlug = this.categories()[0]?.slug ?? 'outro';
     this.editingProductId.set(null);
     this.editingProductName.set(null);
-    this.prodForm = { name: '', description: '', price: 0, category: 'hamburguer', image: '' };
+    this.prodForm = { name: '', description: '', price: 0, category: firstSlug, image: '' };
     this.showProductForm.set(true);
   }
 
@@ -635,6 +709,17 @@ export class Admin {
       error: () => {
         this.errorMessage.set('Nao foi possivel carregar as integracoes.');
         this.isLoadingIntegrations.set(false);
+      },
+    });
+  }
+
+  private loadCategories(): void {
+    this.api.getCategories().subscribe({
+      next: (cats) => {
+        this.categories.set(cats);
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel carregar as categorias.');
       },
     });
   }

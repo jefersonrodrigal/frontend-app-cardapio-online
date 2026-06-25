@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { CartService } from '../../core/cart.service';
 import { ClientAuthService } from '../../core/client-auth.service';
-import { ClientDto, CreateOrderPayload, EstablishmentDto, ProductDto } from '../../core/api.models';
+import { CategoryDto, ClientDto, CreateOrderPayload, EstablishmentDto, ProductDto } from '../../core/api.models';
 
 interface DeliveryAddressParts {
   zipCode: string;
@@ -29,6 +29,7 @@ export class Home {
   private readonly clientAuth = inject(ClientAuthService);
 
   protected readonly establishment = signal<EstablishmentDto | null>(null);
+  protected readonly categories = signal<CategoryDto[]>([]);
   protected readonly products = signal<ProductDto[]>([]);
   protected readonly authenticatedClient = signal<ClientDto | null>(null);
   protected readonly cart = this.cartService.items;
@@ -52,32 +53,17 @@ export class Home {
   protected readonly loadError = signal('');
   private lastDeliveryZipLookup = '';
   private deliveryAddressParts: DeliveryAddressParts | null = null;
-  protected readonly burgersPage = signal(1);
-  protected readonly drinksPage = signal(1);
-  protected readonly burgers = computed(() =>
-    this.products().filter((item) => item.category === 'hamburguer'),
-  );
-  protected readonly drinks = computed(() =>
-    this.products().filter((item) => item.category === 'bebida'),
-  );
-  protected readonly totalBurgerPages = computed(() =>
-    Math.max(1, Math.ceil(this.burgers().length / MENU_ITEMS_PER_PAGE)),
-  );
-  protected readonly totalDrinkPages = computed(() =>
-    Math.max(1, Math.ceil(this.drinks().length / MENU_ITEMS_PER_PAGE)),
-  );
-  protected readonly paginatedBurgers = computed(() =>
-    this.paginateItems(this.burgers(), this.burgersPage()),
-  );
-  protected readonly paginatedDrinks = computed(() =>
-    this.paginateItems(this.drinks(), this.drinksPage()),
-  );
-  protected readonly burgerPageNumbers = computed(() =>
-    this.visiblePageNumbers(this.burgersPage(), this.totalBurgerPages()),
-  );
-  protected readonly drinkPageNumbers = computed(() =>
-    this.visiblePageNumbers(this.drinksPage(), this.totalDrinkPages()),
-  );
+  protected readonly categoryPages = signal<Record<string, number>>({});
+  protected readonly categorySections = computed(() => {
+    const categories = this.categories();
+    const products = this.products();
+    return categories
+      .filter((cat) => products.some((p) => p.category === cat.slug))
+      .map((cat) => ({
+        category: cat,
+        products: products.filter((p) => p.category === cat.slug),
+      }));
+  });
   protected readonly isRestaurantOpen = computed(() => this.checkRestaurantOpen());
   protected readonly cartCount = this.cartService.count;
   protected readonly cartTotal = this.cartService.total;
@@ -130,12 +116,28 @@ export class Home {
     this.cartService.delete(productId);
   }
 
-  protected setBurgersPage(page: number): void {
-    this.burgersPage.set(this.clampPage(page, this.totalBurgerPages()));
+  protected getCategoryPage(slug: string): number {
+    return this.categoryPages()[slug] ?? 1;
   }
 
-  protected setDrinksPage(page: number): void {
-    this.drinksPage.set(this.clampPage(page, this.totalDrinkPages()));
+  protected getCategoryTotalPages(slug: string): number {
+    const section = this.categorySections().find((s) => s.category.slug === slug);
+    return section ? Math.max(1, Math.ceil(section.products.length / MENU_ITEMS_PER_PAGE)) : 1;
+  }
+
+  protected getCategoryPageNumbers(slug: string): number[] {
+    return this.visiblePageNumbers(this.getCategoryPage(slug), this.getCategoryTotalPages(slug));
+  }
+
+  protected getPaginatedProducts(slug: string): ProductDto[] {
+    const section = this.categorySections().find((s) => s.category.slug === slug);
+    if (!section) return [];
+    return this.paginateItems(section.products, this.getCategoryPage(slug));
+  }
+
+  protected setCategoryPage(slug: string, page: number): void {
+    const total = this.getCategoryTotalPages(slug);
+    this.categoryPages.update((pages) => ({ ...pages, [slug]: this.clampPage(page, total) }));
   }
 
   protected openCart(): void {
@@ -432,6 +434,12 @@ export class Home {
   private loadData(): void {
     this.isLoading.set(true);
     this.loadError.set('');
+    let pending = 2;
+
+    const done = () => {
+      pending--;
+      if (pending === 0) this.isLoading.set(false);
+    };
 
     this.api.getEstablishment().subscribe({
       next: (establishment) => {
@@ -439,20 +447,28 @@ export class Home {
       },
       error: () => {
         this.loadError.set('Nao foi possivel carregar os dados do estabelecimento.');
-        this.isLoading.set(false);
+      },
+    });
+
+    this.api.getCategories().subscribe({
+      next: (cats) => {
+        this.categories.set(cats);
+        done();
+      },
+      error: () => {
+        this.loadError.set('Nao foi possivel carregar as categorias do cardapio.');
+        done();
       },
     });
 
     this.api.getProducts(1, 100).subscribe({
       next: (result) => {
         this.products.set(result.items);
-        this.burgersPage.set(1);
-        this.drinksPage.set(1);
-        this.isLoading.set(false);
+        done();
       },
       error: () => {
         this.loadError.set('Nao foi possivel carregar o cardapio.');
-        this.isLoading.set(false);
+        done();
       },
     });
   }

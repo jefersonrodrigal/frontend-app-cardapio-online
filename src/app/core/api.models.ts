@@ -133,6 +133,18 @@ export interface CreateOrderPayload {
   note?: string | null;
 }
 
+export interface CategoryDto {
+  id: number;
+  slug: string;
+  name: string;
+  sortOrder: number;
+}
+
+export interface CategoryPayload {
+  name: string;
+  sortOrder: number;
+}
+
 export interface IFoodIntegrationDto {
   enabled: boolean;
   clientId: string;

@@ -64,181 +64,101 @@
       </section>
     }
 
-    <section class="section">
-      <div class="section__header">
-        <span class="section__eyebrow">Cardapio online</span>
-        <h2>Conheca nosso menu</h2>
-      </div>
-
-      @if (isLoading()) {
+    @if (isLoading()) {
+      <section class="section">
         <p class="cart-items__empty">Carregando cardapio...</p>
-      } @else if (burgers().length === 0) {
-        <p class="cart-items__empty">Nenhum hamburguer cadastrado.</p>
-      } @else {
-        <div class="menu-grid">
-          @for (item of paginatedBurgers(); track item.id) {
-            <article class="menu-card">
-              <div class="menu-card__media">
-                <span class="menu-card__badge">Destaque</span>
-                <img
-                  class="menu-card__image"
-                  [src]="item.imageUrl"
-                  [alt]="item.name"
-                  width="320"
-                  height="220"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-
-              <div class="menu-card__content">
-                <div class="menu-card__body">
-                  <div class="menu-card__meta">
-                    <span class="menu-card__tag">Hamburguer artesanal</span>
-                  </div>
-                  <h3>{{ item.name }}</h3>
-                  <p class="menu-card__price">
-                    {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
-                  </p>
-                  <p class="menu-card__description">{{ item.description }}</p>
-                </div>
-
-                <div class="menu-card__footer">
-                  <span class="menu-card__cta-copy">Peca agora</span>
-                  <button type="button" class="cart-action" (click)="addToCart(item)">
-                    <i class="fa fa-cart-plus" aria-hidden="true"></i>
-                    <span>Adicionar</span>
-                  </button>
-                </div>
-              </div>
-            </article>
-          }
-        </div>
-
-        @if (totalBurgerPages() > 1) {
-          <div class="pagination">
-            <button
-              type="button"
-              class="pagination__button"
-              [disabled]="burgersPage() === 1"
-              (click)="setBurgersPage(burgersPage() - 1)"
-            >
-              Anterior
-            </button>
-
-            <div class="pagination__pages">
-              @for (page of burgerPageNumbers(); track page) {
-                <button
-                  type="button"
-                  class="pagination__button"
-                  [ngClass]="burgersPage() === page ? 'pagination__button--active' : ''"
-                  (click)="setBurgersPage(page)"
-                >
-                  {{ page }}
-                </button>
-              }
-            </div>
-
-            <button
-              type="button"
-              class="pagination__button"
-              [disabled]="burgersPage() === totalBurgerPages()"
-              (click)="setBurgersPage(burgersPage() + 1)"
-            >
-              Proxima
-            </button>
+      </section>
+    } @else if (!loadError() && categorySections().length === 0) {
+      <section class="section">
+        <p class="cart-items__empty">Nenhum item disponivel no momento.</p>
+      </section>
+    } @else {
+      @for (section of categorySections(); track section.category.slug; let first = $first) {
+        <section class="section">
+          <div [class]="first ? 'section__header' : 'section__header section__header--compact'">
+            @if (first) {
+              <span class="section__eyebrow">Cardapio online</span>
+            }
+            <h2>{{ section.category.name }}</h2>
           </div>
-        }
-      }
-    </section>
 
-    <section class="section">
-      <div class="section__header section__header--compact">
-        <span class="section__eyebrow">Complementos</span>
-        <h2>Bebidas</h2>
-      </div>
+          <div class="menu-grid">
+            @for (item of getPaginatedProducts(section.category.slug); track item.id) {
+              <article class="menu-card">
+                <div class="menu-card__media">
+                  <span class="menu-card__badge">{{ section.category.name }}</span>
+                  <img
+                    class="menu-card__image"
+                    [src]="item.imageUrl"
+                    [alt]="item.name"
+                    width="320"
+                    height="220"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
 
-      @if (isLoading()) {
-        <p class="cart-items__empty">Carregando cardapio...</p>
-      } @else if (drinks().length === 0) {
-        <p class="cart-items__empty">Nenhuma bebida cadastrada.</p>
-      } @else {
-        <div class="menu-grid">
-          @for (item of paginatedDrinks(); track item.id) {
-            <article class="menu-card menu-card--drink">
-              <div class="menu-card__media menu-card__media--drink">
-                <span class="menu-card__badge menu-card__badge--drink">Gelada</span>
-                <img
-                  class="menu-card__image"
-                  [src]="item.imageUrl"
-                  [alt]="item.name"
-                  width="320"
-                  height="220"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-
-              <div class="menu-card__content">
-                <div class="menu-card__body">
-                  <div class="menu-card__meta">
-                    <span class="menu-card__tag menu-card__tag--drink">Bebida gelada</span>
+                <div class="menu-card__content">
+                  <div class="menu-card__body">
+                    <div class="menu-card__meta">
+                      <span class="menu-card__tag">{{ section.category.name }}</span>
+                    </div>
+                    <h3>{{ item.name }}</h3>
+                    <p class="menu-card__price">
+                      {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                    </p>
+                    <p class="menu-card__description">{{ item.description }}</p>
                   </div>
-                  <h3>{{ item.name }}</h3>
-                  <p class="menu-card__price">
-                    {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
-                  </p>
-                  <p class="menu-card__description">Ideal para acompanhar seu pedido.</p>
+
+                  <div class="menu-card__footer">
+                    <span class="menu-card__cta-copy">Peca agora</span>
+                    <button type="button" class="cart-action" (click)="addToCart(item)">
+                      <i class="fa fa-cart-plus" aria-hidden="true"></i>
+                      <span>Adicionar</span>
+                    </button>
+                  </div>
                 </div>
-
-                <div class="menu-card__footer">
-                  <span class="menu-card__cta-copy">Adicione ao combo</span>
-                  <button type="button" class="cart-action" (click)="addToCart(item)">
-                    <i class="fa fa-cart-plus" aria-hidden="true"></i>
-                    <span>Adicionar</span>
-                  </button>
-                </div>
-              </div>
-            </article>
-          }
-        </div>
-
-        @if (totalDrinkPages() > 1) {
-          <div class="pagination pagination--left">
-            <button
-              type="button"
-              class="pagination__button"
-              [disabled]="drinksPage() === 1"
-              (click)="setDrinksPage(drinksPage() - 1)"
-            >
-              Anterior
-            </button>
-
-            <div class="pagination__pages">
-              @for (page of drinkPageNumbers(); track page) {
-                <button
-                  type="button"
-                  class="pagination__button"
-                  [ngClass]="drinksPage() === page ? 'pagination__button--active' : ''"
-                  (click)="setDrinksPage(page)"
-                >
-                  {{ page }}
-                </button>
-              }
-            </div>
-
-            <button
-              type="button"
-              class="pagination__button"
-              [disabled]="drinksPage() === totalDrinkPages()"
-              (click)="setDrinksPage(drinksPage() + 1)"
-            >
-              Proxima
-            </button>
+              </article>
+            }
           </div>
-        }
+
+          @if (getCategoryTotalPages(section.category.slug) > 1) {
+            <div class="pagination">
+              <button
+                type="button"
+                class="pagination__button"
+                [disabled]="getCategoryPage(section.category.slug) === 1"
+                (click)="setCategoryPage(section.category.slug, getCategoryPage(section.category.slug) - 1)"
+              >
+                Anterior
+              </button>
+
+              <div class="pagination__pages">
+                @for (page of getCategoryPageNumbers(section.category.slug); track page) {
+                  <button
+                    type="button"
+                    class="pagination__button"
+                    [ngClass]="getCategoryPage(section.category.slug) === page ? 'pagination__button--active' : ''"
+                    (click)="setCategoryPage(section.category.slug, page)"
+                  >
+                    {{ page }}
+                  </button>
+                }
+              </div>
+
+              <button
+                type="button"
+                class="pagination__button"
+                [disabled]="getCategoryPage(section.category.slug) === getCategoryTotalPages(section.category.slug)"
+                (click)="setCategoryPage(section.category.slug, getCategoryPage(section.category.slug) + 1)"
+              >
+                Proxima
+              </button>
+            </div>
+          }
+        </section>
       }
-    </section>
+    }
   </main>
 
   @if (isCartOpen()) {
