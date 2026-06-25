@@ -1,0 +1,19 @@
+html {
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background:
+    radial-gradient(circle at top, rgb(254 242 242), transparent 38%),
+    linear-gradient(180deg, #f8fafc 0%, #fff7ed 100%);
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input {
+  font-family: inherit;
+}

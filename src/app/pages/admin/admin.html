@@ -1,0 +1,749 @@
+<div class="admin-shell">
+  <header class="admin-header">
+    <div class="admin-header__brand">
+      <i class="fa fa-utensils" aria-hidden="true"></i>
+      <div>
+        <span class="admin-header__name">{{ estForm.name || 'Cardapio Online' }}</span>
+        <span class="admin-header__badge">Painel Administrativo</span>
+      </div>
+    </div>
+    <button type="button" class="logout-button" (click)="logout()">
+      <i class="fa fa-right-from-bracket" aria-hidden="true"></i>
+      Sair
+    </button>
+  </header>
+
+  <nav class="admin-tabs">
+    <button type="button" class="admin-tab"
+      [class.admin-tab--active]="activeTab() === 'estabelecimento'"
+      (click)="setTab('estabelecimento')">
+      <i class="fa fa-store" aria-hidden="true"></i>
+      Estabelecimento
+    </button>
+    <button type="button" class="admin-tab"
+      [class.admin-tab--active]="activeTab() === 'produtos'"
+      (click)="setTab('produtos')">
+      <i class="fa fa-bowl-food" aria-hidden="true"></i>
+      Produtos
+    </button>
+    <button type="button" class="admin-tab"
+      [class.admin-tab--active]="activeTab() === 'clientes'"
+      (click)="setTab('clientes')">
+      <i class="fa fa-users" aria-hidden="true"></i>
+      Clientes
+    </button>
+    <button type="button" class="admin-tab"
+      [class.admin-tab--active]="activeTab() === 'pedidos'"
+      (click)="setTab('pedidos')">
+      <i class="fa fa-receipt" aria-hidden="true"></i>
+      Pedidos
+    </button>
+    <button type="button" class="admin-tab"
+      [class.admin-tab--active]="activeTab() === 'integracoes'"
+      (click)="setTab('integracoes')">
+      <i class="fa fa-plug" aria-hidden="true"></i>
+      Integracoes
+    </button>
+  </nav>
+
+  <main class="admin-content">
+    @if (errorMessage()) {
+      <div class="alert alert--error">
+        <i class="fa fa-circle-exclamation" aria-hidden="true"></i>
+        {{ errorMessage() }}
+      </div>
+    }
+
+    @if (activeTab() === 'estabelecimento') {
+      <section class="admin-section">
+        <div class="admin-section__header">
+          <div>
+            <h2>Dados do Estabelecimento</h2>
+            <p>Informacoes exibidas no seu cardapio publico.</p>
+          </div>
+        </div>
+
+        @if (estSaved()) {
+          <div class="alert alert--success">
+            <i class="fa fa-circle-check" aria-hidden="true"></i>
+            Dados salvos com sucesso!
+          </div>
+        }
+
+        @if (isLoadingEstablishment()) {
+          <p class="empty-state">Carregando dados do estabelecimento...</p>
+        } @else {
+          <form class="admin-form" (submit)="saveEstablishment(); $event.preventDefault()">
+            <div class="form-grid">
+              <div class="field">
+                <label for="est-name">Nome do estabelecimento</label>
+                <input id="est-name" type="text" name="estName" [(ngModel)]="estForm.name"
+                  placeholder="Nome do seu estabelecimento" />
+              </div>
+              <div class="field">
+                <label for="est-category">Categoria</label>
+                <select id="est-category" name="estCategory" [(ngModel)]="estForm.category">
+                  <option value="hamburgueria">Hamburgueria</option>
+                  <option value="pizzaria">Pizzaria</option>
+                  <option value="lanchonete">Lanchonete</option>
+                  <option value="restaurante">Restaurante</option>
+                  <option value="cafeteria">Cafeteria</option>
+                  <option value="doceria">Doceria</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div class="field field--wide">
+                <label for="est-logo-url">Logo da empresa</label>
+                <input id="est-logo-url" type="text" name="estLogoUrl" [(ngModel)]="estForm.logoUrl"
+                  placeholder="https://... ou upload abaixo" />
+                <div class="image-upload">
+                  <input
+                    id="est-logo-upload"
+                    type="file"
+                    accept="image/*"
+                    class="image-upload__input"
+                    (change)="onEstablishmentLogoSelected($event)"
+                    #establishmentLogoUpload
+                  />
+                  <button
+                    type="button"
+                    class="secondary-button image-upload__button"
+                    (click)="establishmentLogoUpload.click()"
+                  >
+                    <i class="fa fa-image" aria-hidden="true"></i>
+                    Enviar logo
+                  </button>
+                  @if (estForm.logoUrl) {
+                    <img
+                      class="image-upload__preview image-upload__preview--logo"
+                      [src]="estForm.logoUrl"
+                      [alt]="estForm.name || 'Preview da logo da empresa'"
+                      width="128"
+                      height="128"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  }
+                </div>
+              </div>
+              <div class="field field--wide">
+                <label for="est-address">Endereco</label>
+                <input id="est-address" type="text" name="estAddress" [(ngModel)]="estForm.address"
+                  placeholder="Rua, numero, bairro, cidade" />
+              </div>
+              <div class="field">
+                <label for="est-whatsapp">WhatsApp para pedidos</label>
+                <input id="est-whatsapp" type="tel" name="estWhatsapp" [(ngModel)]="estForm.whatsapp"
+                  placeholder="5511999999999" />
+              </div>
+              <div class="field">
+                <label for="est-open">Abertura</label>
+                <input id="est-open" type="time" name="estOpenTime" [(ngModel)]="estForm.openTime" />
+              </div>
+              <div class="field">
+                <label for="est-close">Fechamento</label>
+                <input id="est-close" type="time" name="estCloseTime" [(ngModel)]="estForm.closeTime" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary-button">
+                <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                Salvar alteracoes
+              </button>
+            </div>
+          </form>
+        }
+      </section>
+    }
+
+    @if (activeTab() === 'produtos') {
+      <section class="admin-section">
+        <div class="admin-section__header">
+          <div>
+            <h2>Produtos</h2>
+            <p>Gerencie os itens do seu cardapio.</p>
+          </div>
+          @if (!showProductForm()) {
+            <button type="button" class="primary-button" (click)="openAddProduct()">
+              <i class="fa fa-plus" aria-hidden="true"></i>
+              Adicionar produto
+            </button>
+          }
+        </div>
+
+        @if (prodSaved()) {
+          <div class="alert alert--success">
+            <i class="fa fa-circle-check" aria-hidden="true"></i>
+            Produto salvo com sucesso!
+          </div>
+        }
+
+        @if (showProductForm()) {
+          <div class="product-form-card">
+            <h3>{{ editingProductName() ? 'Editar produto' : 'Novo produto' }}</h3>
+            <form class="admin-form" (submit)="saveProduct(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="prod-name">Nome</label>
+                  <input id="prod-name" type="text" name="prodName" [(ngModel)]="prodForm.name"
+                    placeholder="Nome do produto" />
+                </div>
+                <div class="field">
+                  <label for="prod-category">Categoria</label>
+                  <select id="prod-category" name="prodCategory" [(ngModel)]="prodForm.category">
+                    <option value="hamburguer">Hamburguer</option>
+                    <option value="pizza">Pizza</option>
+                    <option value="bebida">Bebida</option>
+                    <option value="sobremesa">Sobremesa</option>
+                    <option value="porcao">Porcao</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div class="field field--wide">
+                  <label for="prod-description">Descricao</label>
+                  <textarea id="prod-description" name="prodDescription" [(ngModel)]="prodForm.description"
+                    rows="2" placeholder="Ingredientes e detalhes do produto"></textarea>
+                </div>
+                <div class="field">
+                  <label for="prod-price">Preco (R$)</label>
+                  <input id="prod-price" type="number" name="prodPrice" [(ngModel)]="prodForm.price"
+                    step="0.01" min="0" placeholder="0,00" />
+                </div>
+                <div class="field">
+                  <label for="prod-image">URL da imagem</label>
+                  <input id="prod-image" type="text" name="prodImage" [(ngModel)]="prodForm.image"
+                    placeholder="https://... ou assets/..." />
+                </div>
+                <div class="field field--wide">
+                  <label for="prod-image-upload">Upload da imagem</label>
+                  <div class="image-upload">
+                    <input
+                      id="prod-image-upload"
+                      type="file"
+                      accept="image/*"
+                      class="image-upload__input"
+                      (change)="onProductImageSelected($event)"
+                      #productImageUpload
+                    />
+                    <button
+                      type="button"
+                      class="secondary-button image-upload__button"
+                      (click)="productImageUpload.click()"
+                    >
+                      <i class="fa fa-upload" aria-hidden="true"></i>
+                      Enviar imagem
+                    </button>
+                    @if (prodForm.image) {
+                      <img
+                        class="image-upload__preview"
+                        [src]="prodForm.image"
+                        [alt]="prodForm.name || 'Preview da imagem do produto'"
+                        width="128"
+                        height="128"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    }
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="secondary-button" (click)="cancelProductForm()">
+                  Cancelar
+                </button>
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar produto
+                </button>
+              </div>
+            </form>
+          </div>
+        }
+
+        <div class="product-list">
+          @if (isLoadingProducts()) {
+            <p class="empty-state">Carregando produtos...</p>
+          } @else if (products().length === 0) {
+            <p class="empty-state">Nenhum produto cadastrado ainda.</p>
+          } @else {
+            @for (product of paginatedProducts(); track product.id) {
+              <article class="product-item">
+                @if (product.image) {
+                  <img
+                    class="product-item__image"
+                    [src]="product.image"
+                    [alt]="product.name"
+                    width="72"
+                    height="72"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                }
+                <div class="product-item__info">
+                  <span class="product-item__category">{{ product.category }}</span>
+                  <strong class="product-item__name">{{ product.name }}</strong>
+                  @if (product.description) {
+                    <p class="product-item__description">{{ product.description }}</p>
+                  }
+                  <span class="product-item__price">
+                    {{ product.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                  </span>
+                </div>
+                <div class="product-item__actions">
+                  <button type="button" class="edit-button" (click)="editProduct(product)">
+                    <i class="fa fa-pen" aria-hidden="true"></i>
+                    Editar
+                  </button>
+                  <button type="button" class="delete-button" (click)="deleteProduct(product.id)">
+                    <i class="fa fa-trash" aria-hidden="true"></i>
+                    Excluir
+                  </button>
+                </div>
+              </article>
+            }
+          }
+        </div>
+
+        @if (totalProductPages() > 1) {
+          <div class="pagination">
+            <span class="pagination__info">
+              Mostrando {{ productsRange().start }}-{{ productsRange().end }}
+              de {{ productsRange().total }} produtos
+            </span>
+            <div class="pagination__controls">
+              <button type="button" class="pagination__btn"
+                [disabled]="productsPage() === 1"
+                (click)="setProductsPage(productsPage() - 1)">
+                <i class="fa fa-chevron-left" aria-hidden="true"></i>
+              </button>
+              @for (n of productPageNumbers(); track n) {
+                <button type="button" class="pagination__btn"
+                  [class.pagination__btn--active]="productsPage() === n"
+                  (click)="setProductsPage(n)">
+                  {{ n }}
+                </button>
+              }
+              <button type="button" class="pagination__btn"
+                [disabled]="productsPage() === totalProductPages()"
+                (click)="setProductsPage(productsPage() + 1)">
+                <i class="fa fa-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab() === 'clientes') {
+      <section class="admin-section">
+        <div class="admin-section__header">
+          <div>
+            <h2>Clientes</h2>
+            <p>Historico de clientes cadastrados na plataforma.</p>
+          </div>
+          <div class="header-stats">
+            <span class="stat-chip">
+              <i class="fa fa-users" aria-hidden="true"></i>
+              {{ clients().length }} cadastrados
+            </span>
+          </div>
+        </div>
+
+        <div class="client-list">
+          @if (isLoadingClients()) {
+            <p class="empty-state">Carregando clientes...</p>
+          } @else if (clients().length === 0) {
+            <p class="empty-state">Nenhum cliente encontrado.</p>
+          } @else {
+            @for (client of paginatedClients(); track client.id) {
+              <article class="client-item">
+                <div class="client-avatar"
+                  [style.background]="clientAvatarColor(client.name)">
+                  {{ clientInitials(client.name) }}
+                </div>
+
+                <div class="client-info">
+                  <strong class="client-info__name">{{ client.name }}</strong>
+                  <span class="client-info__email">{{ client.email || 'Sem e-mail' }}</span>
+                  <span class="client-info__meta">
+                    <i class="fa fa-phone" aria-hidden="true"></i>{{ client.phone }}
+                    &nbsp;-&nbsp;
+                    <i class="fa fa-location-dot" aria-hidden="true"></i>{{ client.fullAddress || 'Nao informado' }}
+                  </span>
+                </div>
+
+                <div class="client-stats">
+                  <div class="client-stat">
+                    <span class="client-stat__value">{{ client.ordersCount }}</span>
+                    <span class="client-stat__label">pedidos</span>
+                  </div>
+                  <div class="client-stat">
+                    <span class="client-stat__value">
+                      {{ client.totalSpent | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                    </span>
+                    <span class="client-stat__label">total gasto</span>
+                  </div>
+                </div>
+
+                <div class="client-meta">
+                  <span class="client-meta__label">Desde</span>
+                  <span class="client-meta__date">{{ client.registeredAt }}</span>
+                </div>
+              </article>
+            }
+          }
+        </div>
+
+        @if (totalClientPages() > 1) {
+          <div class="pagination">
+            <span class="pagination__info">
+              Mostrando {{ clientsRange().start }}-{{ clientsRange().end }}
+              de {{ clientsRange().total }} clientes
+            </span>
+            <div class="pagination__controls">
+              <button type="button" class="pagination__btn"
+                [disabled]="clientsPage() === 1"
+                (click)="setClientsPage(clientsPage() - 1)">
+                <i class="fa fa-chevron-left" aria-hidden="true"></i>
+              </button>
+              @for (n of clientPageNumbers(); track n) {
+                <button type="button" class="pagination__btn"
+                  [class.pagination__btn--active]="clientsPage() === n"
+                  (click)="setClientsPage(n)">
+                  {{ n }}
+                </button>
+              }
+              <button type="button" class="pagination__btn"
+                [disabled]="clientsPage() === totalClientPages()"
+                (click)="setClientsPage(clientsPage() + 1)">
+                <i class="fa fa-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab() === 'pedidos') {
+      <section class="admin-section">
+        <div class="admin-section__header">
+          <div>
+            <h2>Pedidos</h2>
+            <p>Acompanhe e gerencie os pedidos recebidos em tempo real.</p>
+          </div>
+          <div class="header-stats">
+            <span class="stat-chip">
+              <i class="fa fa-receipt" aria-hidden="true"></i>
+              {{ filteredOrders().length }} pedidos
+            </span>
+          </div>
+        </div>
+
+        <div class="orders-filter">
+          <label class="orders-filter__label" for="order-date-filter">
+            <i class="fa fa-calendar-day" aria-hidden="true"></i>
+            Filtrar por data:
+          </label>
+          <input id="order-date-filter" type="date" class="orders-filter__input"
+            [(ngModel)]="filterDateValue"
+            (ngModelChange)="setFilterDate($event)" />
+          @if (filterDate()) {
+            <button type="button" class="orders-filter__clear" (click)="clearDateFilter()">
+              <i class="fa fa-xmark" aria-hidden="true"></i>
+              Limpar
+            </button>
+            <span class="orders-filter__result">
+              {{ filteredOrders().length }}
+              {{ filteredOrders().length === 1 ? 'pedido encontrado' : 'pedidos encontrados' }}
+            </span>
+          } @else {
+            <span class="orders-filter__result orders-filter__result--muted">
+              Exibindo todos os {{ orders().length }} pedidos
+            </span>
+          }
+        </div>
+
+        <div class="orders-summary">
+          <div class="order-summary-card order-summary-card--pending">
+            <div class="order-summary-card__icon">
+              <i class="fa fa-clock" aria-hidden="true"></i>
+            </div>
+            <div class="order-summary-card__data">
+              <span class="order-summary-card__value">{{ pendingOrdersCount() }}</span>
+              <span class="order-summary-card__label">Pendentes</span>
+            </div>
+          </div>
+          <div class="order-summary-card order-summary-card--active">
+            <div class="order-summary-card__icon">
+              <i class="fa fa-fire-burner" aria-hidden="true"></i>
+            </div>
+            <div class="order-summary-card__data">
+              <span class="order-summary-card__value">{{ activeOrdersCount() }}</span>
+              <span class="order-summary-card__label">Em andamento</span>
+            </div>
+          </div>
+          <div class="order-summary-card order-summary-card--revenue">
+            <div class="order-summary-card__icon">
+              <i class="fa fa-circle-check" aria-hidden="true"></i>
+            </div>
+            <div class="order-summary-card__data">
+              <span class="order-summary-card__value">
+                {{ todayRevenue() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+              </span>
+              <span class="order-summary-card__label">Receita (entregues)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-list">
+          @if (isLoadingOrders()) {
+            <p class="empty-state">Carregando pedidos...</p>
+          } @else if (filteredOrders().length === 0) {
+            <div class="orders-empty">
+              <i class="fa fa-calendar-xmark" aria-hidden="true"></i>
+              <p>Nenhum pedido encontrado para esta data.</p>
+              <button type="button" class="secondary-button" (click)="clearDateFilter()">
+                Limpar filtro
+              </button>
+            </div>
+          } @else {
+            @for (order of paginatedOrders(); track order.id) {
+              <article class="order-card">
+                <div class="order-card__top">
+                  <div class="order-card__id">
+                    <strong>{{ order.number }}</strong>
+                    <span class="order-card__client">{{ order.clientName }}</span>
+                    <span class="order-card__time">{{ order.createdAt }}</span>
+                  </div>
+                  <div class="order-card__badges">
+                    <span [class]="sourceBadgeClass(order.source)">
+                      <i class="fa {{ sourceIcon(order.source) }}" aria-hidden="true"></i>
+                      {{ sourceLabel(order.source) }}
+                    </span>
+                    <span [class]="orderStatusClass(order.status)">
+                      {{ orderStatusLabel(order.status) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="order-card__items">
+                  @for (item of order.items; track item.productName) {
+                    <div class="order-item-row">
+                      <span class="order-item-row__qty">{{ item.quantity }}x</span>
+                      <span class="order-item-row__name">{{ item.productName }}</span>
+                      <span class="order-item-row__price">
+                        {{ item.subtotal | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                      </span>
+                    </div>
+                  }
+                </div>
+
+                <div class="order-card__footer">
+                  <div class="order-card__meta">
+                    <span class="order-card__address">
+                      <i class="fa fa-location-dot" aria-hidden="true"></i>
+                      {{ order.address }}
+                    </span>
+                    @if (order.note) {
+                      <span class="order-card__note">
+                        <i class="fa fa-comment" aria-hidden="true"></i>
+                        {{ order.note }}
+                      </span>
+                    }
+                    <span class="order-card__phone">
+                      <i class="fa fa-phone" aria-hidden="true"></i>
+                      {{ order.clientPhone }}
+                    </span>
+                  </div>
+                  <div class="order-card__total-area">
+                    <span class="order-card__total">
+                      {{ order.total | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                    </span>
+                    @if (canAdvance(order.status) || canCancel(order.status)) {
+                      <div class="order-card__actions">
+                        @if (canAdvance(order.status)) {
+                          <button type="button" class="primary-button" (click)="advanceOrderStatus(order.id)">
+                            <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                            {{ nextStatusLabel(order.status) }}
+                          </button>
+                        }
+                        @if (canCancel(order.status)) {
+                          <button type="button" class="danger-button" (click)="cancelOrder(order.id)">
+                            <i class="fa fa-xmark" aria-hidden="true"></i>
+                            Cancelar
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              </article>
+            }
+          }
+        </div>
+
+        @if (totalOrderPages() > 1) {
+          <div class="pagination">
+            <span class="pagination__info">
+              Mostrando {{ ordersRange().start }}-{{ ordersRange().end }}
+              de {{ ordersRange().total }} pedidos
+            </span>
+            <div class="pagination__controls">
+              <button type="button" class="pagination__btn"
+                [disabled]="ordersPage() === 1"
+                (click)="setOrdersPage(ordersPage() - 1)">
+                <i class="fa fa-chevron-left" aria-hidden="true"></i>
+              </button>
+              @for (n of orderPageNumbers(); track n) {
+                <button type="button" class="pagination__btn"
+                  [class.pagination__btn--active]="ordersPage() === n"
+                  (click)="setOrdersPage(n)">
+                  {{ n }}
+                </button>
+              }
+              <button type="button" class="pagination__btn"
+                [disabled]="ordersPage() === totalOrderPages()"
+                (click)="setOrdersPage(ordersPage() + 1)">
+                <i class="fa fa-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab() === 'integracoes') {
+      <section class="admin-section">
+        <div class="admin-section__header">
+          <div>
+            <h2>Integracoes</h2>
+            <p>Centralize os canais externos de venda e atendimento em um unico lugar.</p>
+          </div>
+        </div>
+
+        <nav class="integration-navbar" aria-label="Menus de integracao">
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'ifood'"
+            (click)="setIntegrationMenu('ifood')"
+          >
+            <i class="fa fa-utensils" aria-hidden="true"></i>
+            iFood
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'anotai'"
+            (click)="setIntegrationMenu('anotai')"
+          >
+            <i class="fa fa-clipboard-list" aria-hidden="true"></i>
+            Anotai
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'ubereats'"
+            (click)="setIntegrationMenu('ubereats')"
+          >
+            <i class="fa fa-motorcycle" aria-hidden="true"></i>
+            Uber Eats
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === '99food'"
+            (click)="setIntegrationMenu('99food')"
+          >
+            <i class="fa fa-bag-shopping" aria-hidden="true"></i>
+            99Food
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'aiagents'"
+            (click)="setIntegrationMenu('aiagents')"
+          >
+            <i class="fa fa-robot" aria-hidden="true"></i>
+            Agents de IA
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'whatsapp'"
+            (click)="setIntegrationMenu('whatsapp')"
+          >
+            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            WhatsApp
+          </button>
+        </nav>
+
+        @if (activeIntegrationMenu() === 'ifood') {
+          <div class="integration-placeholder">
+            <i class="fa fa-utensils" aria-hidden="true"></i>
+            <strong>iFood</strong>
+            <p>
+              Configure aqui o fluxo de sincronizacao com cardapio, pedidos e status do iFood
+              quando os endpoints estiverem disponiveis.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === 'anotai') {
+          <div class="integration-placeholder">
+            <i class="fa fa-clipboard-list" aria-hidden="true"></i>
+            <strong>Anotai</strong>
+            <p>
+              Use esta area para centralizar automacoes, captura de pedidos e integracoes
+              operacionais vindas do Anotai.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === 'whatsapp') {
+          <div class="integration-placeholder">
+            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            <strong>WhatsApp</strong>
+            <p>
+              Aqui voce podera conectar atendimento, mensagens e confirmacoes de pedido pelo
+              WhatsApp assim que a integracao for habilitada no backend.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === 'ubereats') {
+          <div class="integration-placeholder">
+            <i class="fa fa-motorcycle" aria-hidden="true"></i>
+            <strong>Uber Eats</strong>
+            <p>
+              Reserve este espaco para conectar catalogo, pedidos e atualizacoes de entrega
+              do Uber Eats quando a integracao estiver pronta.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === '99food') {
+          <div class="integration-placeholder">
+            <i class="fa fa-bag-shopping" aria-hidden="true"></i>
+            <strong>99Food</strong>
+            <p>
+              Aqui voce podera concentrar o fluxo operacional da 99Food, com sincronizacao
+              de menu, recebimento de pedidos e acompanhamento de status.
+            </p>
+          </div>
+        }
+
+        @if (activeIntegrationMenu() === 'aiagents') {
+          <div class="integration-placeholder">
+            <i class="fa fa-robot" aria-hidden="true"></i>
+            <strong>Agents de IA</strong>
+            <p>
+              Use esta area para conectar agentes de IA ao atendimento, automacoes de pedidos,
+              suporte ao cliente e operacoes assistidas assim que essa integracao estiver disponivel.
+            </p>
+          </div>
+        }
+      </section>
+    }
+  </main>
+</div>
