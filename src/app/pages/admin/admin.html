@@ -676,71 +676,542 @@
             <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
             WhatsApp
           </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'takeblip'"
+            (click)="setIntegrationMenu('takeblip')"
+          >
+            <i class="fa fa-comments" aria-hidden="true"></i>
+            Take Blip
+          </button>
+          <button
+            type="button"
+            class="integration-navbar__item"
+            [class.integration-navbar__item--active]="activeIntegrationMenu() === 'zenvia'"
+            (click)="setIntegrationMenu('zenvia')"
+          >
+            <i class="fa fa-message" aria-hidden="true"></i>
+            Zenvia
+          </button>
         </nav>
 
-        @if (activeIntegrationMenu() === 'ifood') {
-          <div class="integration-placeholder">
-            <i class="fa fa-utensils" aria-hidden="true"></i>
-            <strong>iFood</strong>
-            <p>
-              Configure aqui o fluxo de sincronizacao com cardapio, pedidos e status do iFood
-              quando os endpoints estiverem disponiveis.
-            </p>
+        @if (isLoadingIntegrations()) {
+          <p class="empty-state">Carregando integracoes...</p>
+        }
+
+        @if (!isLoadingIntegrations() && activeIntegrationMenu() === 'ifood') {
+          <div class="integration-card">
+            <div class="integration-card__header">
+              <div class="integration-card__brand">
+                <div class="integration-icon" style="background: #EA1D2C;">
+                  <i class="fa fa-utensils" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <strong class="integration-card__name">iFood</strong>
+                  <span class="integration-card__description">Sincronize pedidos e cardapio com o iFood</span>
+                </div>
+              </div>
+              <span class="status-badge" [class.status-badge--active]="iFoodForm.enabled">
+                <span class="status-badge__dot"></span>
+                {{ iFoodForm.enabled ? 'Ativo' : 'Inativo' }}
+              </span>
+            </div>
+
+            @if (integrationSaved() === 'ifood') {
+              <div class="integration-saved-alert">
+                <i class="fa fa-circle-check" aria-hidden="true"></i>
+                Integracao iFood salva com sucesso!
+              </div>
+            }
+
+            <form class="integration-form" (submit)="saveIFood(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label class="toggle-label">
+                    <input type="checkbox" class="toggle-input" [(ngModel)]="iFoodForm.enabled" name="iFoodEnabled" />
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>{{ iFoodForm.enabled ? 'Integracao ativa' : 'Integracao inativa' }}</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="ifood-client-id">Client ID</label>
+                  <input id="ifood-client-id" type="text" name="iFoodClientId"
+                    [(ngModel)]="iFoodForm.clientId" placeholder="Client ID do Portal iFood" />
+                </div>
+                <div class="field">
+                  <label for="ifood-client-secret">Client Secret</label>
+                  <input id="ifood-client-secret" type="password" name="iFoodClientSecret"
+                    [(ngModel)]="iFoodForm.clientSecret" placeholder="Client Secret do Portal iFood" />
+                </div>
+                <div class="field">
+                  <label for="ifood-merchant-id">Merchant ID</label>
+                  <input id="ifood-merchant-id" type="text" name="iFoodMerchantId"
+                    [(ngModel)]="iFoodForm.merchantId" placeholder="ID do estabelecimento no iFood" />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar
+                </button>
+              </div>
+            </form>
           </div>
         }
 
-        @if (activeIntegrationMenu() === 'anotai') {
-          <div class="integration-placeholder">
-            <i class="fa fa-clipboard-list" aria-hidden="true"></i>
-            <strong>Anotai</strong>
-            <p>
-              Use esta area para centralizar automacoes, captura de pedidos e integracoes
-              operacionais vindas do Anotai.
-            </p>
+        @if (!isLoadingIntegrations() && activeIntegrationMenu() === 'anotai') {
+          <div class="integration-card">
+            <div class="integration-card__header">
+              <div class="integration-card__brand">
+                <div class="integration-icon" style="background: #f97316;">
+                  <i class="fa fa-clipboard-list" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <strong class="integration-card__name">Anotai</strong>
+                  <span class="integration-card__description">Automacoes e captura de pedidos via Anotai</span>
+                </div>
+              </div>
+              <span class="status-badge" [class.status-badge--active]="anotaiForm.enabled">
+                <span class="status-badge__dot"></span>
+                {{ anotaiForm.enabled ? 'Ativo' : 'Inativo' }}
+              </span>
+            </div>
+
+            @if (integrationSaved() === 'anotai') {
+              <div class="integration-saved-alert">
+                <i class="fa fa-circle-check" aria-hidden="true"></i>
+                Integracao Anotai salva com sucesso!
+              </div>
+            }
+
+            <form class="integration-form" (submit)="saveAnotai(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label class="toggle-label">
+                    <input type="checkbox" class="toggle-input" [(ngModel)]="anotaiForm.enabled" name="anotaiEnabled" />
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>{{ anotaiForm.enabled ? 'Integracao ativa' : 'Integracao inativa' }}</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="anotai-api-token">API Token</label>
+                  <input id="anotai-api-token" type="password" name="anotaiApiToken"
+                    [(ngModel)]="anotaiForm.apiToken" placeholder="Token de autenticacao do Anotai" />
+                </div>
+                <div class="field">
+                  <label for="anotai-account-id">Account ID</label>
+                  <input id="anotai-account-id" type="text" name="anotaiAccountId"
+                    [(ngModel)]="anotaiForm.accountId" placeholder="ID da conta no Anotai" />
+                </div>
+                <div class="field field--wide">
+                  <label for="anotai-webhook-url">Webhook URL</label>
+                  <input id="anotai-webhook-url" type="url" name="anotaiWebhookUrl"
+                    [(ngModel)]="anotaiForm.webhookUrl" placeholder="https://..." />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar
+                </button>
+              </div>
+            </form>
           </div>
         }
 
-        @if (activeIntegrationMenu() === 'whatsapp') {
-          <div class="integration-placeholder">
-            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-            <strong>WhatsApp</strong>
-            <p>
-              Aqui voce podera conectar atendimento, mensagens e confirmacoes de pedido pelo
-              WhatsApp assim que a integracao for habilitada no backend.
-            </p>
+        @if (!isLoadingIntegrations() && activeIntegrationMenu() === 'ubereats') {
+          <div class="integration-card">
+            <div class="integration-card__header">
+              <div class="integration-card__brand">
+                <div class="integration-icon" style="background: #18181b;">
+                  <i class="fa fa-motorcycle" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <strong class="integration-card__name">Uber Eats</strong>
+                  <span class="integration-card__description">Gerencie pedidos e catalogo no Uber Eats</span>
+                </div>
+              </div>
+              <span class="status-badge" [class.status-badge--active]="uberEatsForm.enabled">
+                <span class="status-badge__dot"></span>
+                {{ uberEatsForm.enabled ? 'Ativo' : 'Inativo' }}
+              </span>
+            </div>
+
+            @if (integrationSaved() === 'ubereats') {
+              <div class="integration-saved-alert">
+                <i class="fa fa-circle-check" aria-hidden="true"></i>
+                Integracao Uber Eats salva com sucesso!
+              </div>
+            }
+
+            <form class="integration-form" (submit)="saveUberEats(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label class="toggle-label">
+                    <input type="checkbox" class="toggle-input" [(ngModel)]="uberEatsForm.enabled" name="uberEatsEnabled" />
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>{{ uberEatsForm.enabled ? 'Integracao ativa' : 'Integracao inativa' }}</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="uber-client-id">Client ID</label>
+                  <input id="uber-client-id" type="text" name="uberClientId"
+                    [(ngModel)]="uberEatsForm.clientId" placeholder="Client ID da API Uber Eats" />
+                </div>
+                <div class="field">
+                  <label for="uber-client-secret">Client Secret</label>
+                  <input id="uber-client-secret" type="password" name="uberClientSecret"
+                    [(ngModel)]="uberEatsForm.clientSecret" placeholder="Client Secret da API Uber Eats" />
+                </div>
+                <div class="field">
+                  <label for="uber-store-id">Store ID</label>
+                  <input id="uber-store-id" type="text" name="uberStoreId"
+                    [(ngModel)]="uberEatsForm.storeId" placeholder="ID da loja no Uber Eats" />
+                </div>
+                <div class="field">
+                  <label for="uber-webhook-secret">Webhook Signing Secret</label>
+                  <input id="uber-webhook-secret" type="password" name="uberWebhookSecret"
+                    [(ngModel)]="uberEatsForm.webhookSigningSecret" placeholder="Segredo de assinatura dos webhooks" />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar
+                </button>
+              </div>
+            </form>
           </div>
         }
 
-        @if (activeIntegrationMenu() === 'ubereats') {
-          <div class="integration-placeholder">
-            <i class="fa fa-motorcycle" aria-hidden="true"></i>
-            <strong>Uber Eats</strong>
-            <p>
-              Reserve este espaco para conectar catalogo, pedidos e atualizacoes de entrega
-              do Uber Eats quando a integracao estiver pronta.
-            </p>
+        @if (!isLoadingIntegrations() && activeIntegrationMenu() === '99food') {
+          <div class="integration-card">
+            <div class="integration-card__header">
+              <div class="integration-card__brand">
+                <div class="integration-icon" style="background: #f59e0b;">
+                  <i class="fa fa-bag-shopping" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <strong class="integration-card__name">99Food</strong>
+                  <span class="integration-card__description">Sincronize menu e pedidos com a 99Food</span>
+                </div>
+              </div>
+              <span class="status-badge" [class.status-badge--active]="ninetyNineFoodForm.enabled">
+                <span class="status-badge__dot"></span>
+                {{ ninetyNineFoodForm.enabled ? 'Ativo' : 'Inativo' }}
+              </span>
+            </div>
+
+            @if (integrationSaved() === '99food') {
+              <div class="integration-saved-alert">
+                <i class="fa fa-circle-check" aria-hidden="true"></i>
+                Integracao 99Food salva com sucesso!
+              </div>
+            }
+
+            <form class="integration-form" (submit)="saveNinetyNineFood(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label class="toggle-label">
+                    <input type="checkbox" class="toggle-input" [(ngModel)]="ninetyNineFoodForm.enabled" name="ninetyNineFoodEnabled" />
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>{{ ninetyNineFoodForm.enabled ? 'Integracao ativa' : 'Integracao inativa' }}</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="food99-client-id">Client ID</label>
+                  <input id="food99-client-id" type="text" name="food99ClientId"
+                    [(ngModel)]="ninetyNineFoodForm.clientId" placeholder="Client ID da API 99Food" />
+                </div>
+                <div class="field">
+                  <label for="food99-client-secret">Client Secret</label>
+                  <input id="food99-client-secret" type="password" name="food99ClientSecret"
+                    [(ngModel)]="ninetyNineFoodForm.clientSecret" placeholder="Client Secret da API 99Food" />
+                </div>
+                <div class="field">
+                  <label for="food99-store-id">Store ID</label>
+                  <input id="food99-store-id" type="text" name="food99StoreId"
+                    [(ngModel)]="ninetyNineFoodForm.storeId" placeholder="ID da loja na 99Food" />
+                </div>
+                <div class="field">
+                  <label for="food99-webhook-url">Webhook URL</label>
+                  <input id="food99-webhook-url" type="url" name="food99WebhookUrl"
+                    [(ngModel)]="ninetyNineFoodForm.webhookUrl" placeholder="https://..." />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar
+                </button>
+              </div>
+            </form>
           </div>
         }
 
-        @if (activeIntegrationMenu() === '99food') {
-          <div class="integration-placeholder">
-            <i class="fa fa-bag-shopping" aria-hidden="true"></i>
-            <strong>99Food</strong>
-            <p>
-              Aqui voce podera concentrar o fluxo operacional da 99Food, com sincronizacao
-              de menu, recebimento de pedidos e acompanhamento de status.
-            </p>
+        @if (!isLoadingIntegrations() && activeIntegrationMenu() === 'aiagents') {
+          <div class="integration-card">
+            <div class="integration-card__header">
+              <div class="integration-card__brand">
+                <div class="integration-icon" style="background: #6366f1;">
+                  <i class="fa fa-robot" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <strong class="integration-card__name">Agents de IA</strong>
+                  <span class="integration-card__description">Conecte atendimento e automacoes com IA</span>
+                </div>
+              </div>
+              <span class="status-badge" [class.status-badge--active]="aiAgentsForm.enabled">
+                <span class="status-badge__dot"></span>
+                {{ aiAgentsForm.enabled ? 'Ativo' : 'Inativo' }}
+              </span>
+            </div>
+
+            @if (integrationSaved() === 'aiagents') {
+              <div class="integration-saved-alert">
+                <i class="fa fa-circle-check" aria-hidden="true"></i>
+                Integracao Agents de IA salva com sucesso!
+              </div>
+            }
+
+            <form class="integration-form" (submit)="saveAiAgents(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label class="toggle-label">
+                    <input type="checkbox" class="toggle-input" [(ngModel)]="aiAgentsForm.enabled" name="aiAgentsEnabled" />
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>{{ aiAgentsForm.enabled ? 'Integracao ativa' : 'Integracao inativa' }}</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="ai-provider">Provedor de IA</label>
+                  <select id="ai-provider" name="aiProvider" [(ngModel)]="aiAgentsForm.provider">
+                    <option value="">Selecione um provedor</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="other">Outro</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="ai-model">Modelo</label>
+                  <input id="ai-model" type="text" name="aiModel"
+                    [(ngModel)]="aiAgentsForm.model" placeholder="Ex: gpt-4o, claude-sonnet-4-6" />
+                </div>
+                <div class="field">
+                  <label for="ai-api-key">API Key</label>
+                  <input id="ai-api-key" type="password" name="aiApiKey"
+                    [(ngModel)]="aiAgentsForm.apiKey" placeholder="Chave de API do provedor" />
+                </div>
+                <div class="field">
+                  <label for="ai-assistant-id">Assistant ID</label>
+                  <input id="ai-assistant-id" type="text" name="aiAssistantId"
+                    [(ngModel)]="aiAgentsForm.assistantId" placeholder="ID do assistente (se aplicavel)" />
+                </div>
+                <div class="field field--wide">
+                  <label for="ai-webhook-url">Webhook URL</label>
+                  <input id="ai-webhook-url" type="url" name="aiWebhookUrl"
+                    [(ngModel)]="aiAgentsForm.webhookUrl" placeholder="https://..." />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar
+                </button>
+              </div>
+            </form>
           </div>
         }
 
-        @if (activeIntegrationMenu() === 'aiagents') {
-          <div class="integration-placeholder">
-            <i class="fa fa-robot" aria-hidden="true"></i>
-            <strong>Agents de IA</strong>
-            <p>
-              Use esta area para conectar agentes de IA ao atendimento, automacoes de pedidos,
-              suporte ao cliente e operacoes assistidas assim que essa integracao estiver disponivel.
-            </p>
+        @if (!isLoadingIntegrations() && activeIntegrationMenu() === 'whatsapp') {
+          <div class="integration-card">
+            <div class="integration-card__header">
+              <div class="integration-card__brand">
+                <div class="integration-icon" style="background: #16a34a;">
+                  <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <strong class="integration-card__name">WhatsApp</strong>
+                  <span class="integration-card__description">Atendimento e pedidos via WhatsApp Business API</span>
+                </div>
+              </div>
+              <span class="status-badge" [class.status-badge--active]="whatsAppForm.enabled">
+                <span class="status-badge__dot"></span>
+                {{ whatsAppForm.enabled ? 'Ativo' : 'Inativo' }}
+              </span>
+            </div>
+
+            @if (integrationSaved() === 'whatsapp') {
+              <div class="integration-saved-alert">
+                <i class="fa fa-circle-check" aria-hidden="true"></i>
+                Integracao WhatsApp salva com sucesso!
+              </div>
+            }
+
+            <form class="integration-form" (submit)="saveWhatsApp(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label class="toggle-label">
+                    <input type="checkbox" class="toggle-input" [(ngModel)]="whatsAppForm.enabled" name="whatsAppEnabled" />
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>{{ whatsAppForm.enabled ? 'Integracao ativa' : 'Integracao inativa' }}</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="wa-phone-number-id">Phone Number ID</label>
+                  <input id="wa-phone-number-id" type="text" name="waPhoneNumberId"
+                    [(ngModel)]="whatsAppForm.phoneNumberId" placeholder="ID do numero de telefone no Meta" />
+                </div>
+                <div class="field">
+                  <label for="wa-business-account-id">Business Account ID</label>
+                  <input id="wa-business-account-id" type="text" name="waBusinessAccountId"
+                    [(ngModel)]="whatsAppForm.businessAccountId" placeholder="WABA ID no Meta" />
+                </div>
+                <div class="field field--wide">
+                  <label for="wa-access-token">Access Token</label>
+                  <input id="wa-access-token" type="password" name="waAccessToken"
+                    [(ngModel)]="whatsAppForm.accessToken" placeholder="Token de acesso permanente ou temporario" />
+                </div>
+                <div class="field">
+                  <label for="wa-app-secret">App Secret</label>
+                  <input id="wa-app-secret" type="password" name="waAppSecret"
+                    [(ngModel)]="whatsAppForm.appSecret" placeholder="App Secret do Meta App" />
+                </div>
+                <div class="field">
+                  <label for="wa-verify-token">Verify Token</label>
+                  <input id="wa-verify-token" type="text" name="waVerifyToken"
+                    [(ngModel)]="whatsAppForm.verifyToken" placeholder="Token para validacao do webhook" />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        }
+
+        @if (!isLoadingIntegrations() && activeIntegrationMenu() === 'takeblip') {
+          <div class="integration-card">
+            <div class="integration-card__header">
+              <div class="integration-card__brand">
+                <div class="integration-icon" style="background: #3b82f6;">
+                  <i class="fa fa-comments" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <strong class="integration-card__name">Take Blip</strong>
+                  <span class="integration-card__description">Chatbots e automacao de atendimento via Take Blip</span>
+                </div>
+              </div>
+              <span class="status-badge" [class.status-badge--active]="takeBlipForm.enabled">
+                <span class="status-badge__dot"></span>
+                {{ takeBlipForm.enabled ? 'Ativo' : 'Inativo' }}
+              </span>
+            </div>
+
+            @if (integrationSaved() === 'takeblip') {
+              <div class="integration-saved-alert">
+                <i class="fa fa-circle-check" aria-hidden="true"></i>
+                Integracao Take Blip salva com sucesso!
+              </div>
+            }
+
+            <form class="integration-form" (submit)="saveTakeBlip(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label class="toggle-label">
+                    <input type="checkbox" class="toggle-input" [(ngModel)]="takeBlipForm.enabled" name="takeBlipEnabled" />
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>{{ takeBlipForm.enabled ? 'Integracao ativa' : 'Integracao inativa' }}</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="blip-bot-short-name">Bot Short Name</label>
+                  <input id="blip-bot-short-name" type="text" name="blipBotShortName"
+                    [(ngModel)]="takeBlipForm.botShortName" placeholder="Nome curto do bot no Take Blip" />
+                </div>
+                <div class="field">
+                  <label for="blip-authorization-key">Authorization Key</label>
+                  <input id="blip-authorization-key" type="password" name="blipAuthorizationKey"
+                    [(ngModel)]="takeBlipForm.authorizationKey" placeholder="Chave de autorizacao do bot" />
+                </div>
+                <div class="field field--wide">
+                  <label for="blip-webhook-url">Webhook URL</label>
+                  <input id="blip-webhook-url" type="url" name="blipWebhookUrl"
+                    [(ngModel)]="takeBlipForm.webhookUrl" placeholder="https://..." />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        }
+
+        @if (!isLoadingIntegrations() && activeIntegrationMenu() === 'zenvia') {
+          <div class="integration-card">
+            <div class="integration-card__header">
+              <div class="integration-card__brand">
+                <div class="integration-icon" style="background: #0ea5e9;">
+                  <i class="fa fa-message" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <strong class="integration-card__name">Zenvia</strong>
+                  <span class="integration-card__description">Mensageria multicanal via plataforma Zenvia</span>
+                </div>
+              </div>
+              <span class="status-badge" [class.status-badge--active]="zenviaForm.enabled">
+                <span class="status-badge__dot"></span>
+                {{ zenviaForm.enabled ? 'Ativo' : 'Inativo' }}
+              </span>
+            </div>
+
+            @if (integrationSaved() === 'zenvia') {
+              <div class="integration-saved-alert">
+                <i class="fa fa-circle-check" aria-hidden="true"></i>
+                Integracao Zenvia salva com sucesso!
+              </div>
+            }
+
+            <form class="integration-form" (submit)="saveZenvia(); $event.preventDefault()">
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label class="toggle-label">
+                    <input type="checkbox" class="toggle-input" [(ngModel)]="zenviaForm.enabled" name="zenviaEnabled" />
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span>{{ zenviaForm.enabled ? 'Integracao ativa' : 'Integracao inativa' }}</span>
+                  </label>
+                </div>
+                <div class="field">
+                  <label for="zenvia-api-token">API Token</label>
+                  <input id="zenvia-api-token" type="password" name="zenviaApiToken"
+                    [(ngModel)]="zenviaForm.apiToken" placeholder="Token de autenticacao da Zenvia" />
+                </div>
+                <div class="field">
+                  <label for="zenvia-channel-id">Channel ID</label>
+                  <input id="zenvia-channel-id" type="text" name="zenviaChannelId"
+                    [(ngModel)]="zenviaForm.channelId" placeholder="ID do canal na Zenvia" />
+                </div>
+                <div class="field field--wide">
+                  <label for="zenvia-webhook-url">Webhook URL</label>
+                  <input id="zenvia-webhook-url" type="url" name="zenviaWebhookUrl"
+                    [(ngModel)]="zenviaForm.webhookUrl" placeholder="https://..." />
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">
+                  <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                  Salvar
+                </button>
+              </div>
+            </form>
           </div>
         }
       </section>

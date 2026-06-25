@@ -1,19 +1,28 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import {
+  AiAgentsIntegrationDto,
+  AnotaiIntegrationDto,
   ClientLoginPayload,
   ClientDto,
   CreateClientPayload,
   CreateOrderPayload,
   EstablishmentDto,
+  IFoodIntegrationDto,
+  IntegrationsOverviewDto,
   LoginRequest,
   LoginResponse,
+  NinetyNineFoodIntegrationDto,
   OrderDto,
   PaginatedResult,
   ProductDto,
   ProductPayload,
+  TakeBlipIntegrationDto,
+  UberEatsIntegrationDto,
   UploadResponse,
   ViaCepAddressResponse,
+  WhatsAppIntegrationDto,
+  ZenviaIntegrationDto,
 } from './api.models';
 import { apiBaseUrl } from './api.config';
 
@@ -104,5 +113,41 @@ export class ApiService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<UploadResponse>(`${this.baseUrl}/Uploads/image`, formData);
+  }
+
+  getIntegrations() {
+    return this.http.get<IntegrationsOverviewDto>(`${this.baseUrl}/Integrations`);
+  }
+
+  saveIFoodIntegration(payload: IFoodIntegrationDto) {
+    return this.http.put<IFoodIntegrationDto>(`${this.baseUrl}/Integrations/ifood`, payload);
+  }
+
+  saveAnotaiIntegration(payload: AnotaiIntegrationDto) {
+    return this.http.put<AnotaiIntegrationDto>(`${this.baseUrl}/Integrations/anotai`, payload);
+  }
+
+  saveUberEatsIntegration(payload: UberEatsIntegrationDto) {
+    return this.http.put<UberEatsIntegrationDto>(`${this.baseUrl}/Integrations/ubereats`, payload);
+  }
+
+  saveNinetyNineFoodIntegration(payload: NinetyNineFoodIntegrationDto) {
+    return this.http.put<NinetyNineFoodIntegrationDto>(`${this.baseUrl}/Integrations/99food`, payload);
+  }
+
+  saveAiAgentsIntegration(payload: AiAgentsIntegrationDto) {
+    return this.http.put<AiAgentsIntegrationDto>(`${this.baseUrl}/Integrations/aiagents`, payload);
+  }
+
+  saveWhatsAppIntegration(payload: WhatsAppIntegrationDto) {
+    return this.http.put<WhatsAppIntegrationDto>(`${this.baseUrl}/Integrations/whatsapp`, payload);
+  }
+
+  saveTakeBlipIntegration(payload: TakeBlipIntegrationDto) {
+    return this.http.put<TakeBlipIntegrationDto>(`${this.baseUrl}/Integrations/takeblip`, payload);
+  }
+
+  saveZenviaIntegration(payload: ZenviaIntegrationDto) {
+    return this.http.put<ZenviaIntegrationDto>(`${this.baseUrl}/Integrations/zenvia`, payload);
   }
 }

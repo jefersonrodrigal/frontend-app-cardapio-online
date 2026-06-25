@@ -4,10 +4,24 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { ClientDto, EstablishmentDto, OrderDto, ProductDto, ProductPayload } from '../../core/api.models';
+import {
+  AiAgentsIntegrationDto,
+  AnotaiIntegrationDto,
+  ClientDto,
+  EstablishmentDto,
+  IFoodIntegrationDto,
+  NinetyNineFoodIntegrationDto,
+  OrderDto,
+  ProductDto,
+  ProductPayload,
+  TakeBlipIntegrationDto,
+  UberEatsIntegrationDto,
+  WhatsAppIntegrationDto,
+  ZenviaIntegrationDto,
+} from '../../core/api.models';
 
 type Tab = 'estabelecimento' | 'produtos' | 'clientes' | 'pedidos' | 'integracoes';
-type IntegrationMenu = 'ifood' | 'anotai' | 'ubereats' | '99food' | 'aiagents' | 'whatsapp';
+type IntegrationMenu = 'ifood' | 'anotai' | 'ubereats' | '99food' | 'aiagents' | 'whatsapp' | 'takeblip' | 'zenvia';
 type OrderStatus = 'pendente' | 'em_preparo' | 'em_entrega' | 'entregue' | 'cancelado';
 type OrderSource = 'whatsapp' | 'ifood' | 'site';
 
@@ -44,6 +58,8 @@ export class Admin {
   protected readonly isLoadingProducts = signal(false);
   protected readonly isLoadingClients = signal(false);
   protected readonly isLoadingOrders = signal(false);
+  protected readonly isLoadingIntegrations = signal(false);
+  protected readonly integrationSaved = signal('');
 
   protected readonly productsPage = signal(1);
   protected readonly clientsPage = signal(1);
@@ -153,11 +169,74 @@ export class Admin {
     image: '',
   };
 
+  protected iFoodForm: IFoodIntegrationDto = {
+    enabled: false,
+    clientId: '',
+    clientSecret: '',
+    merchantId: '',
+  };
+
+  protected anotaiForm: AnotaiIntegrationDto = {
+    enabled: false,
+    apiToken: '',
+    accountId: '',
+    webhookUrl: '',
+  };
+
+  protected uberEatsForm: UberEatsIntegrationDto = {
+    enabled: false,
+    clientId: '',
+    clientSecret: '',
+    storeId: '',
+    webhookSigningSecret: '',
+  };
+
+  protected ninetyNineFoodForm: NinetyNineFoodIntegrationDto = {
+    enabled: false,
+    clientId: '',
+    clientSecret: '',
+    storeId: '',
+    webhookUrl: '',
+  };
+
+  protected aiAgentsForm: AiAgentsIntegrationDto = {
+    enabled: false,
+    provider: '',
+    apiKey: '',
+    model: '',
+    assistantId: '',
+    webhookUrl: '',
+  };
+
+  protected whatsAppForm: WhatsAppIntegrationDto = {
+    enabled: false,
+    phoneNumberId: '',
+    businessAccountId: '',
+    accessToken: '',
+    appSecret: '',
+    verifyToken: '',
+  };
+
+  protected takeBlipForm: TakeBlipIntegrationDto = {
+    enabled: false,
+    botShortName: '',
+    authorizationKey: '',
+    webhookUrl: '',
+  };
+
+  protected zenviaForm: ZenviaIntegrationDto = {
+    enabled: false,
+    apiToken: '',
+    channelId: '',
+    webhookUrl: '',
+  };
+
   constructor() {
     this.loadEstablishment();
     this.loadProducts();
     this.loadClients();
     this.loadOrders();
+    this.loadIntegrations();
   }
 
   protected setTab(tab: Tab): void {
@@ -430,6 +509,134 @@ export class Admin {
   protected logout(): void {
     this.auth.logout();
     this.router.navigate(['/login']);
+  }
+
+  protected saveIFood(): void {
+    this.api.saveIFoodIntegration(this.iFoodForm).subscribe({
+      next: (result) => {
+        this.iFoodForm = result;
+        this.showIntegrationSaved('ifood');
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel salvar a integracao iFood.');
+      },
+    });
+  }
+
+  protected saveAnotai(): void {
+    this.api.saveAnotaiIntegration(this.anotaiForm).subscribe({
+      next: (result) => {
+        this.anotaiForm = result;
+        this.showIntegrationSaved('anotai');
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel salvar a integracao Anotai.');
+      },
+    });
+  }
+
+  protected saveUberEats(): void {
+    this.api.saveUberEatsIntegration(this.uberEatsForm).subscribe({
+      next: (result) => {
+        this.uberEatsForm = result;
+        this.showIntegrationSaved('ubereats');
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel salvar a integracao Uber Eats.');
+      },
+    });
+  }
+
+  protected saveNinetyNineFood(): void {
+    this.api.saveNinetyNineFoodIntegration(this.ninetyNineFoodForm).subscribe({
+      next: (result) => {
+        this.ninetyNineFoodForm = result;
+        this.showIntegrationSaved('99food');
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel salvar a integracao 99Food.');
+      },
+    });
+  }
+
+  protected saveAiAgents(): void {
+    this.api.saveAiAgentsIntegration(this.aiAgentsForm).subscribe({
+      next: (result) => {
+        this.aiAgentsForm = result;
+        this.showIntegrationSaved('aiagents');
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel salvar a integracao Agents de IA.');
+      },
+    });
+  }
+
+  protected saveWhatsApp(): void {
+    this.api.saveWhatsAppIntegration(this.whatsAppForm).subscribe({
+      next: (result) => {
+        this.whatsAppForm = result;
+        this.showIntegrationSaved('whatsapp');
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel salvar a integracao WhatsApp.');
+      },
+    });
+  }
+
+  protected saveTakeBlip(): void {
+    this.api.saveTakeBlipIntegration(this.takeBlipForm).subscribe({
+      next: (result) => {
+        this.takeBlipForm = result;
+        this.showIntegrationSaved('takeblip');
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel salvar a integracao Take Blip.');
+      },
+    });
+  }
+
+  protected saveZenvia(): void {
+    this.api.saveZenviaIntegration(this.zenviaForm).subscribe({
+      next: (result) => {
+        this.zenviaForm = result;
+        this.showIntegrationSaved('zenvia');
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel salvar a integracao Zenvia.');
+      },
+    });
+  }
+
+  private showIntegrationSaved(key: string): void {
+    this.integrationSaved.set(key);
+    this.errorMessage.set('');
+    window.setTimeout(() => {
+      if (this.integrationSaved() === key) {
+        this.integrationSaved.set('');
+      }
+    }, 3000);
+  }
+
+  private loadIntegrations(): void {
+    this.isLoadingIntegrations.set(true);
+
+    this.api.getIntegrations().subscribe({
+      next: (result) => {
+        this.iFoodForm = result.iFood;
+        this.anotaiForm = result.anotai;
+        this.uberEatsForm = result.uberEats;
+        this.ninetyNineFoodForm = result.ninetyNineFood;
+        this.aiAgentsForm = result.aiAgents;
+        this.whatsAppForm = result.whatsApp;
+        this.takeBlipForm = result.takeBlip;
+        this.zenviaForm = result.zenvia;
+        this.isLoadingIntegrations.set(false);
+      },
+      error: () => {
+        this.errorMessage.set('Nao foi possivel carregar as integracoes.');
+        this.isLoadingIntegrations.set(false);
+      },
+    });
   }
 
   private loadEstablishment(): void {

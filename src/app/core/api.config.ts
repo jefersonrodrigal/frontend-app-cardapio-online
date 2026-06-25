@@ -58,5 +58,9 @@ export function isProtectedApiRequest(url: string, method: string): boolean {
     return normalizedMethod === 'GET' || normalizedMethod === 'PUT';
   }
 
+  if (requestPath.startsWith('/Integrations')) {
+    return true;
+  }
+
   return false;
 }

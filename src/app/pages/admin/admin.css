@@ -1091,6 +1091,79 @@
   margin: 0;
 }
 
+/* ── Integration Form ── */
+.integration-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.integration-form .form-actions {
+  border-top: 1px solid rgb(228 228 231);
+  padding-top: 1.25rem;
+}
+
+/* ── Integration Saved Alert ── */
+.integration-saved-alert {
+  align-items: center;
+  background: #dcfce7;
+  color: #15803d;
+  display: flex;
+  font-size: 0.9rem;
+  font-weight: 600;
+  gap: 0.5rem;
+  margin: 1rem 1.5rem 0;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+/* ── Toggle Switch ── */
+.toggle-label {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 500;
+  gap: 0.65rem;
+  user-select: none;
+}
+
+.toggle-input {
+  display: none;
+}
+
+.toggle-track {
+  background: #d4d4d8;
+  border-radius: 999px;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 1.5rem;
+  position: relative;
+  transition: background 200ms ease;
+  width: 2.75rem;
+}
+
+.toggle-input:checked + .toggle-track {
+  background: #16a34a;
+}
+
+.toggle-thumb {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.18);
+  height: 1.2rem;
+  left: 0.15rem;
+  position: absolute;
+  top: 0.15rem;
+  transition: left 200ms ease;
+  width: 1.2rem;
+}
+
+.toggle-input:checked + .toggle-track .toggle-thumb {
+  left: 1.4rem;
+}
+
 /* ══════════════════════════════════════════
    PEDIDOS
 ══════════════════════════════════════════ */

@@ -132,3 +132,76 @@ export interface CreateOrderPayload {
   items: CreateOrderItemPayload[];
   note?: string | null;
 }
+
+export interface IFoodIntegrationDto {
+  enabled: boolean;
+  clientId: string;
+  clientSecret: string;
+  merchantId: string;
+}
+
+export interface AnotaiIntegrationDto {
+  enabled: boolean;
+  apiToken: string;
+  accountId: string;
+  webhookUrl: string;
+}
+
+export interface UberEatsIntegrationDto {
+  enabled: boolean;
+  clientId: string;
+  clientSecret: string;
+  storeId: string;
+  webhookSigningSecret: string;
+}
+
+export interface NinetyNineFoodIntegrationDto {
+  enabled: boolean;
+  clientId: string;
+  clientSecret: string;
+  storeId: string;
+  webhookUrl: string;
+}
+
+export interface AiAgentsIntegrationDto {
+  enabled: boolean;
+  provider: string;
+  apiKey: string;
+  model: string;
+  assistantId: string;
+  webhookUrl: string;
+}
+
+export interface WhatsAppIntegrationDto {
+  enabled: boolean;
+  phoneNumberId: string;
+  businessAccountId: string;
+  accessToken: string;
+  appSecret: string;
+  verifyToken: string;
+}
+
+export interface TakeBlipIntegrationDto {
+  enabled: boolean;
+  botShortName: string;
+  authorizationKey: string;
+  webhookUrl: string;
+}
+
+export interface ZenviaIntegrationDto {
+  enabled: boolean;
+  apiToken: string;
+  channelId: string;
+  webhookUrl: string;
+}
+
+export interface IntegrationsOverviewDto {
+  iFood: IFoodIntegrationDto;
+  anotai: AnotaiIntegrationDto;
+  uberEats: UberEatsIntegrationDto;
+  ninetyNineFood: NinetyNineFoodIntegrationDto;
+  aiAgents: AiAgentsIntegrationDto;
+  whatsApp: WhatsAppIntegrationDto;
+  takeBlip: TakeBlipIntegrationDto;
+  zenvia: ZenviaIntegrationDto;
+}
