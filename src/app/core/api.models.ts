@@ -98,6 +98,7 @@ export interface OrderDto {
   date: string;
   createdAt: string;
   source: string;
+  orderType: string;
   note: string | null;
   items: OrderItemDto[];
 }
@@ -140,6 +141,7 @@ export interface CreateOrderPayload {
   source: string;
   items: CreateOrderItemPayload[];
   note?: string | null;
+  orderType?: string | null;
 }
 
 export interface InventoryProductDto {

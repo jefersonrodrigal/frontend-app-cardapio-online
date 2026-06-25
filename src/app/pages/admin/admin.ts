@@ -7,6 +7,7 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import {
   ClientDto,
+  CreateOrderPayload,
   EstablishmentDto,
   InventoryMovementDto,
   InventoryMovementPayload,
@@ -19,7 +20,9 @@ import {
 type Tab = 'estabelecimento' | 'produtos' | 'estoque' | 'clientes' | 'pedidos' | 'integracoes';
 type IntegrationMenu = 'ifood' | 'anotai' | 'ubereats' | '99food' | 'aiagents' | 'whatsapp';
 type OrderStatus = 'pendente' | 'em_preparo' | 'em_entrega' | 'entregue' | 'cancelado';
-type OrderSource = 'whatsapp' | 'ifood' | 'site';
+type OrderSource = 'whatsapp' | 'ifood' | 'site' | 'interno';
+type InternalOrderType = 'ConsumoLocal' | 'Retirada' | 'Entrega';
+type OrderType = 'consumolocal' | 'retirada' | 'entrega';
 type InventoryFilter = 'all' | 'low' | 'out' | 'untracked';
 type InventoryMovementType = 'entrada' | 'perda' | 'ajuste';
 
@@ -28,6 +31,15 @@ interface Product extends ProductDto {
 }
 
 interface Client extends ClientDto {}
+
+interface InternalOrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  trackInventory: boolean;
+  stockQuantity: number;
+}
 
 const PRODUCTS_PER_PAGE = 5;
 const INVENTORY_PER_PAGE = 8;
@@ -60,6 +72,7 @@ export class Admin {
   protected readonly isLoadingInventoryMovements = signal(false);
   protected readonly isLoadingClients = signal(false);
   protected readonly isLoadingOrders = signal(false);
+  protected readonly isSavingInternalOrder = signal(false);
 
   protected readonly productsPage = signal(1);
   protected readonly inventoryPage = signal(1);
@@ -67,13 +80,17 @@ export class Admin {
   protected readonly ordersPage = signal(1);
   protected readonly inventoryFilter = signal<InventoryFilter>('all');
   protected readonly showInventoryMovementForm = signal(false);
+  protected readonly showInternalOrderForm = signal(false);
   protected readonly selectedInventoryProductName = signal<string | null>(null);
+  protected readonly internalOrderError = signal('');
+  protected readonly orderSaved = signal(false);
 
   protected readonly products = signal<Product[]>([]);
   protected readonly inventoryProducts = signal<InventoryProductDto[]>([]);
   protected readonly inventoryMovements = signal<InventoryMovementDto[]>([]);
   protected readonly clients = signal<Client[]>([]);
   protected readonly orders = signal<OrderDto[]>([]);
+  protected readonly internalOrderItems = signal<InternalOrderItem[]>([]);
 
   protected readonly totalProductPages = computed(() =>
     Math.max(1, Math.ceil(this.products().length / PRODUCTS_PER_PAGE)),
@@ -204,6 +221,9 @@ export class Admin {
       .filter((order) => this.normalizeStatus(order.status) === 'entregue')
       .reduce((sum, order) => sum + order.total, 0),
   );
+  protected readonly internalOrderTotal = computed(() =>
+    this.internalOrderItems().reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+  );
 
   protected estForm: EstablishmentDto = {
     name: '',
@@ -232,6 +252,17 @@ export class Admin {
     quantity: 0,
     newQuantity: 0,
     reason: '',
+  };
+
+  protected internalOrderForm = {
+    clientName: 'Cliente interno',
+    clientPhone: '',
+    type: 'ConsumoLocal' as InternalOrderType,
+    table: '',
+    address: '',
+    note: '',
+    productId: '',
+    quantity: 1,
   };
 
   constructor() {
@@ -266,6 +297,141 @@ export class Admin {
 
   protected setClientsPage(page: number): void {
     this.clientsPage.set(page);
+  }
+
+  protected openClientRegistration(): void {
+    void this.router.navigate(['/cadastro']);
+  }
+
+  protected openOrderRegistration(): void {
+    this.resetInternalOrderForm();
+    this.showInternalOrderForm.set(true);
+  }
+
+  protected cancelInternalOrderForm(): void {
+    this.showInternalOrderForm.set(false);
+    this.internalOrderError.set('');
+  }
+
+  protected addInternalOrderItem(): void {
+    const product = this.products().find((item) => item.id === this.internalOrderForm.productId);
+    const quantity = Math.max(1, Number(this.internalOrderForm.quantity) || 1);
+
+    if (!product) {
+      this.internalOrderError.set('Selecione um produto para adicionar ao pedido.');
+      return;
+    }
+
+    if (!this.canAddInternalOrderQuantity(product, quantity)) {
+      this.internalOrderError.set(`Quantidade indisponivel para ${product.name}.`);
+      return;
+    }
+
+    this.internalOrderItems.update((items) => {
+      const existingItem = items.find((item) => item.productId === product.id);
+
+      if (existingItem) {
+        return items.map((item) =>
+          item.productId === product.id ? { ...item, quantity: item.quantity + quantity } : item,
+        );
+      }
+
+      return [
+        ...items,
+        {
+          productId: product.id,
+          name: product.name,
+          quantity,
+          unitPrice: product.price,
+          trackInventory: product.trackInventory,
+          stockQuantity: product.stockQuantity,
+        },
+      ];
+    });
+
+    this.internalOrderForm.productId = '';
+    this.internalOrderForm.quantity = 1;
+    this.internalOrderError.set('');
+  }
+
+  protected incrementInternalOrderItem(productId: string): void {
+    const product = this.products().find((item) => item.id === productId);
+
+    if (!product || !this.canAddInternalOrderQuantity(product, 1)) {
+      this.internalOrderError.set(product ? `Estoque maximo atingido para ${product.name}.` : 'Produto nao encontrado.');
+      return;
+    }
+
+    this.internalOrderItems.update((items) =>
+      items.map((item) => (item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item)),
+    );
+    this.internalOrderError.set('');
+  }
+
+  protected decrementInternalOrderItem(productId: string): void {
+    this.internalOrderItems.update((items) =>
+      items
+        .map((item) => (item.productId === productId ? { ...item, quantity: item.quantity - 1 } : item))
+        .filter((item) => item.quantity > 0),
+    );
+    this.internalOrderError.set('');
+  }
+
+  protected removeInternalOrderItem(productId: string): void {
+    this.internalOrderItems.update((items) => items.filter((item) => item.productId !== productId));
+    this.internalOrderError.set('');
+  }
+
+  protected canUseProductInInternalOrder(product: Product): boolean {
+    return !product.trackInventory || product.stockQuantity > 0;
+  }
+
+  protected saveInternalOrder(): void {
+    if (this.internalOrderItems().length === 0) {
+      this.internalOrderError.set('Adicione pelo menos um produto ao pedido.');
+      return;
+    }
+
+    if (this.internalOrderForm.type === 'Entrega' && !this.internalOrderForm.address.trim()) {
+      this.internalOrderError.set('Informe o endereco para pedidos de entrega.');
+      return;
+    }
+
+    const clientName = this.internalOrderForm.clientName.trim() || 'Cliente interno';
+    const payload: CreateOrderPayload = {
+      clientName,
+      clientPhone: this.internalOrderForm.clientPhone.trim() || this.generateInternalOrderPhone(),
+      address: this.internalOrderAddress(),
+      source: 'interno',
+      items: this.internalOrderItems().map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
+      note: this.internalOrderNote(),
+      orderType: this.internalOrderForm.type,
+    };
+
+    this.isSavingInternalOrder.set(true);
+    this.internalOrderError.set('');
+
+    this.api.createOrder(payload).subscribe({
+      next: () => {
+        this.isSavingInternalOrder.set(false);
+        this.showInternalOrderForm.set(false);
+        this.orderSaved.set(true);
+        this.errorMessage.set('');
+        window.setTimeout(() => this.orderSaved.set(false), 3000);
+        this.resetInternalOrderForm();
+        this.loadOrders();
+        this.loadProducts();
+        this.loadInventory();
+        this.loadInventoryMovements();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isSavingInternalOrder.set(false);
+        this.internalOrderError.set(this.getApiErrorMessage(error, 'Nao foi possivel cadastrar o pedido.'));
+      },
+    });
   }
 
   protected clientInitials(name: string): string {
@@ -582,6 +748,7 @@ export class Admin {
       whatsapp: 'WhatsApp',
       ifood: 'iFood',
       site: 'Site',
+      interno: 'Interno',
     };
     return labels[normalizedSource];
   }
@@ -592,8 +759,33 @@ export class Admin {
       whatsapp: 'fa-brands fa-whatsapp',
       ifood: 'fa-utensils',
       site: 'fa-globe',
+      interno: 'fa-store',
     };
     return icons[normalizedSource];
+  }
+
+  protected orderTypeBadgeClass(orderType: string): string {
+    return `order-type-badge order-type-badge--${this.normalizeOrderType(orderType).replace('local', '-local')}`;
+  }
+
+  protected orderTypeLabel(orderType: string): string {
+    const normalizedOrderType = this.normalizeOrderType(orderType);
+    const labels: Record<OrderType, string> = {
+      consumolocal: 'Consumo local',
+      retirada: 'Retirada',
+      entrega: 'Entrega',
+    };
+    return labels[normalizedOrderType];
+  }
+
+  protected orderTypeIcon(orderType: string): string {
+    const normalizedOrderType = this.normalizeOrderType(orderType);
+    const icons: Record<OrderType, string> = {
+      consumolocal: 'fa-chair',
+      retirada: 'fa-bag-shopping',
+      entrega: 'fa-motorcycle',
+    };
+    return icons[normalizedOrderType];
   }
 
   protected inventoryStatusLabel(status: string): string {
@@ -650,6 +842,56 @@ export class Admin {
   protected logout(): void {
     this.auth.logout();
     this.router.navigate(['/login']);
+  }
+
+  private resetInternalOrderForm(): void {
+    this.internalOrderForm = {
+      clientName: 'Cliente interno',
+      clientPhone: '',
+      type: 'ConsumoLocal',
+      table: '',
+      address: '',
+      note: '',
+      productId: '',
+      quantity: 1,
+    };
+    this.internalOrderItems.set([]);
+    this.internalOrderError.set('');
+    this.isSavingInternalOrder.set(false);
+  }
+
+  private canAddInternalOrderQuantity(product: Product, quantityToAdd: number): boolean {
+    if (!product.trackInventory) {
+      return true;
+    }
+
+    const quantityInOrder =
+      this.internalOrderItems().find((item) => item.productId === product.id)?.quantity ?? 0;
+
+    return quantityInOrder + quantityToAdd <= product.stockQuantity;
+  }
+
+  private internalOrderAddress(): string {
+    const table = this.internalOrderForm.table.trim();
+
+    if (this.internalOrderForm.type === 'Entrega') {
+      return this.internalOrderForm.address.trim();
+    }
+
+    if (this.internalOrderForm.type === 'Retirada') {
+      return 'Retirada no balcao';
+    }
+
+    return table ? `Mesa ${table}` : 'Consumo no estabelecimento';
+  }
+
+  private internalOrderNote(): string | null {
+    const note = this.internalOrderForm.note.trim();
+    return note || null;
+  }
+
+  private generateInternalOrderPhone(): string {
+    return `INT-${Date.now().toString().slice(-12)}`;
   }
 
   private loadEstablishment(): void {
@@ -778,8 +1020,24 @@ export class Admin {
         return 'whatsapp';
       case 'ifood':
         return 'ifood';
+      case 'interno':
+        return 'interno';
       default:
         return 'site';
+    }
+  }
+
+  private normalizeOrderType(orderType: string): OrderType {
+    const normalized = orderType.toLowerCase();
+
+    switch (normalized) {
+      case 'consumolocal':
+      case 'consumo_local':
+        return 'consumolocal';
+      case 'retirada':
+        return 'retirada';
+      default:
+        return 'entrega';
     }
   }
 
