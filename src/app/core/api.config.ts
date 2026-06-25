@@ -50,6 +50,10 @@ export function isProtectedApiRequest(url: string, method: string): boolean {
     return normalizedMethod !== 'GET';
   }
 
+  if (requestPath.startsWith('/Inventory')) {
+    return true;
+  }
+
   if (requestPath.startsWith('/Clients')) {
     return normalizedMethod === 'GET';
   }

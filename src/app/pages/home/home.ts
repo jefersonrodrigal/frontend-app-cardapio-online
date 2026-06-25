@@ -1,4 +1,5 @@
 import { CurrencyPipe, NgClass } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
@@ -53,6 +54,7 @@ export class Home {
   protected readonly loadError = signal('');
   private lastDeliveryZipLookup = '';
   private deliveryAddressParts: DeliveryAddressParts | null = null;
+
   protected readonly categoryPages = signal<Record<string, number>>({});
   protected readonly categorySections = computed(() => {
     const categories = this.categories();
@@ -64,6 +66,7 @@ export class Home {
         products: products.filter((p) => p.category === cat.slug),
       }));
   });
+
   protected readonly isRestaurantOpen = computed(() => this.checkRestaurantOpen());
   protected readonly cartCount = this.cartService.count;
   protected readonly cartTotal = this.cartService.total;
@@ -97,7 +100,11 @@ export class Home {
   protected readonly isClientAuthenticated = computed(() => this.authenticatedClient() !== null);
 
   protected addToCart(item: ProductDto): void {
-    this.cartService.add(item);
+    if (!this.cartService.add(item)) {
+      this.showToast(this.stockLimitMessage(item), true);
+      return;
+    }
+
     this.showToast('Item adicionado ao carrinho.');
   }
 
@@ -108,7 +115,9 @@ export class Home {
   protected incrementInCart(productId: string): void {
     const product = this.products().find((p) => p.id === productId);
     if (product) {
-      this.cartService.add(product);
+      if (!this.cartService.add(product)) {
+        this.showToast(this.stockLimitMessage(product), true);
+      }
     }
   }
 
@@ -138,6 +147,36 @@ export class Home {
   protected setCategoryPage(slug: string, page: number): void {
     const total = this.getCategoryTotalPages(slug);
     this.categoryPages.update((pages) => ({ ...pages, [slug]: this.clampPage(page, total) }));
+  }
+
+  protected canAddProduct(item: ProductDto): boolean {
+    return !item.trackInventory || item.stockQuantity > 0;
+  }
+
+  protected stockBadgeClass(item: ProductDto): string {
+    return `menu-card__stock menu-card__stock--${this.normalizeStockStatus(item.stockStatus)}`;
+  }
+
+  protected stockLabel(item: ProductDto): string {
+    const status = this.normalizeStockStatus(item.stockStatus);
+
+    if (status === 'untracked') {
+      return 'Disponivel';
+    }
+
+    if (status === 'out') {
+      return 'Esgotado';
+    }
+
+    if (status === 'low') {
+      return `Ultimas ${item.stockQuantity} un.`;
+    }
+
+    return `${item.stockQuantity} un.`;
+  }
+
+  protected isCartItemAtStockLimit(item: { trackInventory: boolean; stockQuantity: number; quantity: number }): boolean {
+    return item.trackInventory && item.quantity >= item.stockQuantity;
   }
 
   protected openCart(): void {
@@ -271,6 +310,13 @@ export class Home {
       return;
     }
 
+    const unavailableItem = this.cart().find((item) => item.trackInventory && item.quantity > item.stockQuantity);
+    if (unavailableItem) {
+      this.showToast(`Quantidade indisponivel para ${unavailableItem.name}.`, true);
+      this.loadData();
+      return;
+    }
+
     const hasName = this.customerName().trim().length > 0;
     const hasPhone = this.customerPhone().trim().length > 0;
     const hasZipCode = this.deliveryZipCode().trim().length > 0;
@@ -326,10 +372,12 @@ export class Home {
         this.showAddressWarning.set(false);
         this.closeCart();
         this.showToast(`Pedido ${order.number} enviado com sucesso.`);
+        this.loadData();
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
         this.isSubmittingOrder.set(false);
-        this.showToast('Nao foi possivel finalizar o pedido.', true);
+        this.showToast(this.getApiErrorMessage(error, 'Nao foi possivel finalizar o pedido.'), true);
+        this.loadData();
       },
     });
   }
@@ -367,6 +415,24 @@ export class Home {
         this.toastMessage.set('');
       }
     }, 3000);
+  }
+
+  private stockLimitMessage(item: ProductDto): string {
+    if (item.trackInventory && item.stockQuantity <= 0) {
+      return `${item.name} esta esgotado.`;
+    }
+
+    return `Estoque maximo atingido para ${item.name}.`;
+  }
+
+  private normalizeStockStatus(status: string): string {
+    const normalized = status.toLowerCase();
+    return ['untracked', 'out', 'low', 'available'].includes(normalized) ? normalized : 'available';
+  }
+
+  private getApiErrorMessage(error: HttpErrorResponse, fallback: string): string {
+    const payload = error.error as { error?: string } | null;
+    return payload?.error || fallback;
   }
 
   private restoreClientSession(): void {
