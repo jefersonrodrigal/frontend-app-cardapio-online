@@ -42,6 +42,10 @@ export function isProtectedApiRequest(url: string, method: string): boolean {
     return false;
   }
 
+  if (requestPath.startsWith('/Orders/client') || requestPath.startsWith('/Orders/track')) {
+    return false;
+  }
+
   if (requestPath.startsWith('/Estabelecimento')) {
     return normalizedMethod !== 'GET';
   }

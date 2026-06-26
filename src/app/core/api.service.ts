@@ -1,10 +1,11 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import {
   AiAgentsIntegrationDto,
   AnotaiIntegrationDto,
   CategoryDto,
   CategoryPayload,
+  ClientAuthResponse,
   ClientLoginPayload,
   ClientDto,
   CreateClientPayload,
@@ -19,6 +20,7 @@ import {
   LoginResponse,
   NinetyNineFoodIntegrationDto,
   OrderDto,
+  OrderTrackingDto,
   PaginatedResult,
   ProductDto,
   ProductPayload,
@@ -30,10 +32,12 @@ import {
   ZenviaIntegrationDto,
 } from './api.models';
 import { apiBaseUrl } from './api.config';
+import { ClientAuthService } from './client-auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
+  private readonly clientAuth = inject(ClientAuthService);
   private readonly baseUrl = apiBaseUrl;
 
   getEstablishment() {
@@ -109,11 +113,11 @@ export class ApiService {
   }
 
   createClient(payload: CreateClientPayload) {
-    return this.http.post<ClientDto>(`${this.baseUrl}/Clients`, payload);
+    return this.http.post<ClientAuthResponse>(`${this.baseUrl}/Clients`, payload);
   }
 
   authenticateClient(payload: ClientLoginPayload) {
-    return this.http.post<ClientDto>(`${this.baseUrl}/Clients/authenticate`, payload);
+    return this.http.post<ClientAuthResponse>(`${this.baseUrl}/Clients/authenticate`, payload);
   }
 
   lookupAddressByCep(cep: string) {
@@ -128,6 +132,20 @@ export class ApiService {
     }
 
     return this.http.get<PaginatedResult<OrderDto>>(`${this.baseUrl}/Orders`, { params });
+  }
+
+  getClientOrders(page: number, pageSize: number) {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    const token = this.clientAuth.token();
+    const options = token
+      ? { params, headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) }
+      : { params };
+
+    return this.http.get<PaginatedResult<OrderDto>>(`${this.baseUrl}/Orders/client`, options);
+  }
+
+  getOrderTracking(id: string) {
+    return this.http.get<OrderTrackingDto>(`${this.baseUrl}/Orders/track/${id}`);
   }
 
   advanceOrderStatus(id: string) {

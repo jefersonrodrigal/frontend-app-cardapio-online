@@ -1123,10 +1123,17 @@
   align-items: center;
   cursor: pointer;
   display: inline-flex;
+  flex-wrap: wrap;
   font-size: 0.9rem;
   font-weight: 500;
   gap: 0.65rem;
+  line-height: 1.35;
   user-select: none;
+}
+
+.toggle-label > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .toggle-input {

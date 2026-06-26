@@ -1,0 +1,111 @@
+<main class="orders-page">
+  <section class="orders-header">
+    <div>
+      <span class="eyebrow">Area do cliente</span>
+      <h1>Meus pedidos</h1>
+      @if (client(); as currentClient) {
+        <p>{{ currentClient.name }} · {{ currentClient.phone }}</p>
+      }
+    </div>
+
+    <div class="orders-header__actions">
+      <button type="button" class="secondary-button" (click)="refresh()">Atualizar</button>
+      <a class="primary-link" routerLink="/home">Cardapio</a>
+    </div>
+  </section>
+
+  @if (!client()) {
+    <section class="state-panel">
+      <h2>Entre como cliente</h2>
+      <p>Use seu cadastro para acompanhar os pedidos vinculados ao seu telefone.</p>
+      <div class="state-panel__actions">
+        <a class="primary-link" routerLink="/acesso-cliente">Entrar</a>
+        <a class="secondary-link" routerLink="/cadastro">Criar cadastro</a>
+      </div>
+    </section>
+  } @else if (errorMessage()) {
+    <section class="state-panel state-panel--error">
+      <h2>Nao foi possivel carregar</h2>
+      <p>{{ errorMessage() }}</p>
+      <div class="state-panel__actions">
+        <a class="primary-link" routerLink="/acesso-cliente">Entrar novamente</a>
+      </div>
+    </section>
+  } @else if (isLoading()) {
+    <section class="state-panel">
+      <p>Carregando pedidos...</p>
+    </section>
+  } @else if (orders().length === 0) {
+    <section class="state-panel">
+      <h2>Nenhum pedido encontrado</h2>
+      <p>Quando voce finalizar um pedido logado, ele aparece aqui.</p>
+      <a class="primary-link" routerLink="/home">Ver cardapio</a>
+    </section>
+  } @else {
+    <section class="orders-list">
+      @for (order of orders(); track order.id) {
+        <article [class]="orderCardClass(order)">
+          <div class="order-card__header">
+            <div>
+              <span class="eyebrow">Pedido {{ order.number }}</span>
+              <h2>{{ statusLabel(order.status) }}</h2>
+              <p>{{ order.createdAt }} · {{ order.orderType || 'Entrega' }}</p>
+            </div>
+            <span [class]="statusPillClass(order.status)">
+              {{ statusLabel(order.status) }}
+            </span>
+          </div>
+
+          <div class="order-card__body">
+            <div class="order-steps">
+              @for (step of steps; track step.status; let index = $index) {
+                <span [class]="stepClass(order, index)" [attr.title]="step.label"></span>
+              }
+            </div>
+
+            <div class="order-items">
+              @for (item of order.items; track item.productId || item.productName) {
+                <div class="order-items__row">
+                  <span>{{ item.quantity }}x {{ item.productName }}</span>
+                  <strong>{{ item.subtotal | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+                </div>
+              }
+            </div>
+
+            <div class="order-card__total">
+              <span>Total</span>
+              <strong>{{ order.total | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+            </div>
+          </div>
+
+          <div class="order-card__footer">
+            <span>Ultima atualizacao: {{ lastUpdated() || order.createdAt }}</span>
+            <a [routerLink]="['/order-tracking', order.id]">Ver acompanhamento</a>
+          </div>
+        </article>
+      }
+    </section>
+
+    @if (totalPages() > 1) {
+      <div class="orders-pagination">
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="page() === 1"
+          (click)="goToPage(page() - 1)"
+        >
+          Anterior
+        </button>
+        <span>Pagina {{ page() }} de {{ totalPages() }}</span>
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="page() === totalPages()"
+          (click)="goToPage(page() + 1)"
+        >
+          Proxima
+        </button>
+      </div>
+    }
+  }
+</main>

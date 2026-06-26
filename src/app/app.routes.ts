@@ -12,6 +12,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/cliente-login/cliente-login').then((m) => m.ClienteLogin),
   },
   {
+    path: 'my-orders',
+    loadComponent: () => import('./pages/my-orders/my-orders').then((m) => m.MyOrders),
+  },
+  {
+    path: 'order-tracking/:id',
+    loadComponent: () => import('./pages/order-tracking/order-tracking').then((m) => m.OrderTracking),
+  },
+  {
     path: 'login',
     loadComponent: () => import('./pages/login/login').then((m) => m.Login),
   },

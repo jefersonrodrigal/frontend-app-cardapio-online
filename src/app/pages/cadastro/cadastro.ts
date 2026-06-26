@@ -76,9 +76,9 @@ export class Cadastro {
     this.errorMessage.set('');
 
     this.api.createClient(this.form).subscribe({
-      next: (client) => {
+      next: (session) => {
         this.isSubmitting.set(false);
-        this.clientAuth.storeSession(client);
+        this.clientAuth.storeSession(session);
         this.successMessage.set('Cadastro realizado com sucesso. Seu acesso ja foi liberado.');
         this.form = {
           name: '',

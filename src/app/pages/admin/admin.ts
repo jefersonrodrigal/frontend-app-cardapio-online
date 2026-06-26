@@ -248,6 +248,7 @@ export class Admin {
     openTime: '18:00',
     closeTime: '22:00',
     deliveryFee: 0,
+    sendOrderTrackingViaWhatsApp: false,
   };
 
   protected prodForm = {
@@ -490,6 +491,7 @@ export class Admin {
       })),
       note: this.internalOrderNote(),
       orderType: this.internalOrderForm.type,
+      trackingBaseUrl: globalThis.location?.origin ?? null,
     };
 
     this.isSavingInternalOrder.set(true);

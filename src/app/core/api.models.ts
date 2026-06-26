@@ -17,6 +17,7 @@ export interface EstablishmentDto {
   openTime: string;
   closeTime: string;
   deliveryFee: number;
+  sendOrderTrackingViaWhatsApp: boolean;
 }
 
 export interface ProductDto {
@@ -49,6 +50,12 @@ export interface ClientDto {
   registeredAt: string;
   ordersCount: number;
   totalSpent: number;
+}
+
+export interface ClientAuthResponse {
+  token: string;
+  expiresAt: string;
+  client: ClientDto;
 }
 
 export interface CreateClientPayload {
@@ -105,6 +112,21 @@ export interface OrderDto {
   items: OrderItemDto[];
 }
 
+export interface OrderTrackingDto {
+  id: string;
+  number: string;
+  address: string;
+  total: number;
+  deliveryFee: number;
+  status: string;
+  date: string;
+  createdAt: string;
+  source: string;
+  orderType: string | null;
+  note: string | null;
+  items: OrderItemDto[];
+}
+
 export interface ProductPayload {
   name: string;
   description: string;
@@ -144,6 +166,7 @@ export interface CreateOrderPayload {
   items: CreateOrderItemPayload[];
   note?: string | null;
   orderType?: string | null;
+  trackingBaseUrl?: string | null;
 }
 
 export interface CategoryDto {

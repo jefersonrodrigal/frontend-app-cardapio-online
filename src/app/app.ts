@@ -15,7 +15,13 @@ export class App {
 
   private isPublicRoute(): boolean {
     const url = this.router.url;
-    return url.startsWith('/home') || url.startsWith('/cadastro') || url.startsWith('/acesso-cliente');
+    return (
+      url.startsWith('/home') ||
+      url.startsWith('/cadastro') ||
+      url.startsWith('/acesso-cliente') ||
+      url.startsWith('/my-orders') ||
+      url.startsWith('/order-tracking')
+    );
   }
 
   protected readonly showNavbar = toSignal(

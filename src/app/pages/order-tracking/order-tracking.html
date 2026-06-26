@@ -1,0 +1,87 @@
+<main class="tracking-page">
+  <section class="tracking-header">
+    <div>
+      <span class="eyebrow">Pedido online</span>
+      <h1>Acompanhamento do pedido</h1>
+    </div>
+
+    <div class="tracking-header__actions">
+      <button type="button" class="secondary-button" (click)="refresh()">Atualizar</button>
+      <a class="primary-link" routerLink="/home">Cardapio</a>
+    </div>
+  </section>
+
+  @if (isLoading()) {
+    <section class="state-panel">
+      <p>Carregando acompanhamento...</p>
+    </section>
+  } @else if (errorMessage()) {
+    <section class="state-panel state-panel--error">
+      <p>{{ errorMessage() }}</p>
+      <a routerLink="/home">Voltar ao cardapio</a>
+    </section>
+  } @else if (order(); as currentOrder) {
+    <section class="tracking-layout">
+      <article class="status-panel">
+        <div class="status-panel__header">
+          <div>
+            <span class="eyebrow">Pedido {{ currentOrder.number }}</span>
+            <h2>{{ statusLabel(currentOrder.status) }}</h2>
+            <p>{{ currentOrder.createdAt }} · {{ currentOrder.orderType || 'Entrega' }}</p>
+          </div>
+          <span [class]="statusPillClass(currentOrder.status)">
+            {{ statusLabel(currentOrder.status) }}
+          </span>
+        </div>
+
+        <div class="tracking-steps">
+          @for (step of steps; track step.status; let index = $index) {
+            <div [class]="stepClass(index)">
+              <span class="tracking-step__marker">{{ index + 1 }}</span>
+              <div>
+                <strong>{{ step.label }}</strong>
+                <p>{{ step.description }}</p>
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (currentOrder.status === 'Cancelado') {
+          <p class="status-panel__alert">Este pedido foi cancelado.</p>
+        }
+
+        <p class="status-panel__updated">
+          Ultima atualizacao: {{ lastUpdated() || currentOrder.createdAt }}
+        </p>
+      </article>
+
+      <aside class="order-summary">
+        <div class="order-summary__header">
+          <span class="eyebrow">Resumo</span>
+          <strong>{{ currentOrder.total | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+        </div>
+
+        <div class="order-summary__items">
+          @for (item of currentOrder.items; track item.productId || item.productName) {
+            <div class="order-summary__item">
+              <span>{{ item.quantity }}x {{ item.productName }}</span>
+              <strong>{{ item.subtotal | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+            </div>
+          }
+        </div>
+
+        @if (currentOrder.deliveryFee > 0) {
+          <div class="order-summary__line">
+            <span>Taxa de entrega</span>
+            <strong>{{ currentOrder.deliveryFee | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+          </div>
+        }
+
+        <div class="order-summary__address">
+          <span>Entrega</span>
+          <p>{{ currentOrder.address }}</p>
+        </div>
+      </aside>
+    </section>
+  }
+</main>

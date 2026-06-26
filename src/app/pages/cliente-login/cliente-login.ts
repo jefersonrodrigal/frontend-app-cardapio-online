@@ -29,8 +29,8 @@ export class ClienteLogin {
     this.errorMessage.set('');
 
     this.api.authenticateClient(this.credentials).subscribe({
-      next: (client) => {
-        this.clientAuth.storeSession(client);
+      next: (session) => {
+        this.clientAuth.storeSession(session);
         this.isSubmitting.set(false);
         this.successMessage.set('Acesso liberado. Redirecionando para o cardapio...');
         window.setTimeout(() => {

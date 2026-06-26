@@ -1,7 +1,7 @@
 import { CurrencyPipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { CartService } from '../../core/cart.service';
 import { ClientAuthService } from '../../core/client-auth.service';
@@ -28,6 +28,7 @@ export class Home {
   private readonly api = inject(ApiService);
   private readonly cartService = inject(CartService);
   private readonly clientAuth = inject(ClientAuthService);
+  private readonly router = inject(Router);
 
   protected readonly establishment = signal<EstablishmentDto | null>(null);
   protected readonly categories = signal<CategoryDto[]>([]);
@@ -349,7 +350,9 @@ export class Home {
         productId: item.id,
         quantity: item.quantity,
       })),
+      trackingBaseUrl: globalThis.location?.origin ?? null,
     };
+    const isAuthenticatedOrder = this.authenticatedClient() !== null;
 
     this.isSubmittingOrder.set(true);
 
@@ -380,6 +383,13 @@ export class Home {
         this.closeCart();
         this.showToast(`Pedido ${order.number} enviado com sucesso.`);
         this.loadData();
+
+        if (isAuthenticatedOrder) {
+          void this.router.navigate(['/my-orders'], { queryParams: { order: order.id } });
+          return;
+        }
+
+        void this.router.navigate(['/order-tracking', order.id]);
       },
       error: (error: HttpErrorResponse) => {
         this.isSubmittingOrder.set(false);
@@ -507,7 +517,7 @@ export class Home {
   private loadData(): void {
     this.isLoading.set(true);
     this.loadError.set('');
-    let pending = 2;
+    let pending = 3;
 
     const done = () => {
       pending--;
@@ -518,9 +528,11 @@ export class Home {
       next: (establishment) => {
         this.establishment.set(establishment);
         this.cartService.deliveryFee.set(establishment.deliveryFee ?? 0);
+        done();
       },
       error: () => {
         this.loadError.set('Nao foi possivel carregar os dados do estabelecimento.');
+        done();
       },
     });
 
