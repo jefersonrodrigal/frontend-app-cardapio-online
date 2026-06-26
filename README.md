@@ -10,6 +10,7 @@ O frontend cobre dois fluxos principais:
 - Exibe dados do estabelecimento (nome, logo, horarios, status aberto/fechado)
 - Renderiza secoes de produtos agrupadas por categoria, com paginacao por secao
 - Carrinho lateral com fluxo de checkout em duas etapas (itens → dados do cliente)
+- Exibe subtotal, taxa de entrega (quando configurada) e total final no carrinho
 - Busca de endereco via CEP (ViaCEP)
 - Acesso rapido para clientes cadastrados
 
@@ -18,8 +19,9 @@ O frontend cobre dois fluxos principais:
 - Gerenciamento de categorias (CRUD com slug auto-gerado)
 - Gerenciamento de produtos vinculados a categorias
 - Visualizacao de clientes cadastrados
-- Acompanhamento e avanco de status de pedidos
-- Configuracoes do estabelecimento com upload de logo
+- Acompanhamento e avanco de status de pedidos com badge do tipo (Entrega / Retirada / Consumo local) e taxa de entrega destacada nos cards
+- Configuracoes do estabelecimento com upload de logo e campo de taxa de entrega
+- Registro interno de pedidos com calculo automatico da taxa quando o tipo e Entrega
 - Configuracao de integracoes externas (iFood, Anotai, Uber Eats, 99Food, AI Agents, WhatsApp, Take Blip, Zenvia)
 
 ## Stack tecnica
@@ -156,11 +158,11 @@ A paginacao de cada secao e independente e armazenada em `Record<string, number>
 
 | Aba | Descricao |
 |---|---|
-| Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp e horario |
+| Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp, horario e taxa de entrega |
 | Produtos | CRUD de produtos com upload de imagem; categoria selecionada via lista dinamica |
 | Categorias | CRUD de categorias; slug auto-gerado e imutavel |
 | Clientes | Listagem somente leitura |
-| Pedidos | Acompanhamento com avanco de status e cancelamento; filtro por data |
+| Pedidos | Acompanhamento com avanco de status e cancelamento; filtro por data; badge de tipo do pedido e taxa de entrega exibida nos cards |
 | Integracoes | Formularios por plataforma com toggle de ativacao e campos especificos |
 
 ## Servico HTTP
@@ -233,7 +235,57 @@ interface EstablishmentDto {
   whatsapp: string;
   openTime: string;
   closeTime: string;
+  deliveryFee: number;  // taxa de entrega em reais; 0 = sem taxa
 }
+
+interface OrderDto {
+  id: string;
+  number: string;
+  clientName: string;
+  clientPhone: string;
+  address: string;
+  total: number;        // ja inclui a taxa de entrega
+  deliveryFee: number;  // snapshot da taxa no momento da criacao
+  status: string;
+  date: string;
+  createdAt: string;
+  source: string;
+  orderType: string | null;  // 'Entrega' | 'Retirada' | 'ConsumoLocal' | null
+  note: string | null;
+  items: OrderItemDto[];
+}
+```
+
+## Taxa de entrega
+
+### Como funciona
+
+A taxa de entrega e configurada pelo administrador na aba **Estabelecimento** do painel. O valor e persistido no banco e retornado pela API em `GET /api/Estabelecimento`.
+
+### Fluxo no cardapio publico
+
+1. A home carrega os dados do estabelecimento e seta `CartService.deliveryFee` com o valor recebido.
+2. O carrinho exibe tres linhas quando a taxa e maior que zero: **Subtotal**, **Taxa de entrega** e **Total**.
+3. Quando a taxa e zero, apenas o **Total** e exibido (sem linhas intermediarias).
+4. Ao finalizar o pedido, o payload envia `orderType: 'Entrega'`; o backend busca a taxa atual do estabelecimento, aplica ao pedido e grava o snapshot em `Order.DeliveryFee`.
+
+### Fluxo no painel administrativo
+
+O registro interno de pedidos recalcula o total conforme o tipo selecionado:
+
+- **Entrega**: subtotal dos itens + `estForm.deliveryFee`
+- **Retirada** e **Consumo local**: apenas subtotal dos itens
+
+O total exibido no formulario interno ja reflete a taxa antes de salvar. Nos cards de pedidos existentes, quando `order.deliveryFee > 0`, uma linha informativa mostra o valor da taxa separado do total.
+
+### CartService — signals expostos
+
+```typescript
+items: Signal<CartItem[]>
+deliveryFee: WritableSignal<number>   // setado ao carregar o estabelecimento
+total: Signal<number>                 // soma dos itens (sem taxa)
+grandTotal: Signal<number>            // total + deliveryFee
+count: Signal<number>
 ```
 
 ## Localizacao

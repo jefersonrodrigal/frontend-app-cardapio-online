@@ -229,8 +229,14 @@ export class Admin {
       .filter((o) => this.normalizeStatus(o.status) === 'entregue')
       .reduce((sum, o) => sum + o.total, 0),
   );
-  protected readonly internalOrderTotal = computed(() =>
+  protected readonly internalOrderSubtotal = computed(() =>
     this.internalOrderItems().reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+  );
+  protected readonly internalOrderDeliveryFee = computed(() =>
+    this.internalOrderForm.type === 'Entrega' ? (this.estForm.deliveryFee ?? 0) : 0,
+  );
+  protected readonly internalOrderTotal = computed(
+    () => this.internalOrderSubtotal() + this.internalOrderDeliveryFee(),
   );
 
   protected estForm: EstablishmentDto = {
@@ -241,6 +247,7 @@ export class Admin {
     whatsapp: '',
     openTime: '18:00',
     closeTime: '22:00',
+    deliveryFee: 0,
   };
 
   protected prodForm = {

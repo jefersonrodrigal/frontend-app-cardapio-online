@@ -75,7 +75,7 @@
     } @else {
       @for (section of categorySections(); track section.category.slug; let first = $first) {
         <section class="section">
-          <div [class]="first ? 'section__header' : 'section__header section__header--compact'">
+          <div class="section__header section__header--compact">
             @if (first) {
               <span class="section__eyebrow">Cardapio online</span>
             }
@@ -86,35 +86,32 @@
             @for (item of getPaginatedProducts(section.category.slug); track item.id) {
               <article class="menu-card" [ngClass]="canAddProduct(item) ? '' : 'menu-card--unavailable'">
                 <div class="menu-card__media">
-                  <span class="menu-card__badge">{{ section.category.name }}</span>
-                  <img
-                    class="menu-card__image"
-                    [src]="item.imageUrl"
-                    [alt]="item.name"
-                    width="320"
-                    height="220"
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  @if (item.imageUrl) {
+                    <img
+                      class="menu-card__image"
+                      [src]="item.imageUrl"
+                      [alt]="item.name"
+                      width="160"
+                      height="130"
+                      loading="lazy"
+                      decoding="async"
+                      (error)="onImageError($event)"
+                    />
+                  } @else {
+                    <i class="fas fa-utensils menu-card__no-image" aria-hidden="true"></i>
+                  }
                 </div>
 
                 <div class="menu-card__content">
                   <div class="menu-card__body">
-                    <div class="menu-card__meta">
-                      <span class="menu-card__tag">{{ section.category.name }}</span>
-                      <span [class]="stockBadgeClass(item)">{{ stockLabel(item) }}</span>
-                    </div>
                     <h3>{{ item.name }}</h3>
-                    <p class="menu-card__price">
-                      {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
-                    </p>
                     <p class="menu-card__description">{{ item.description }}</p>
                   </div>
 
                   <div class="menu-card__footer">
-                    <span class="menu-card__cta-copy">
-                      {{ canAddProduct(item) ? 'Peca agora' : 'Esgotado' }}
-                    </span>
+                    <p class="menu-card__price">
+                      {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                    </p>
                     <button
                       type="button"
                       class="cart-action"
@@ -122,7 +119,6 @@
                       (click)="addToCart(item)"
                     >
                       <i class="fa fa-cart-plus" aria-hidden="true"></i>
-                      <span>Adicionar</span>
                     </button>
                   </div>
                 </div>
@@ -235,8 +231,18 @@
           </div>
 
           <div class="cart-summary">
+            <p>Subtotal</p>
+            <span>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+          </div>
+          @if (cartDeliveryFee() > 0) {
+            <div class="cart-summary">
+              <p>Taxa de entrega</p>
+              <span>{{ cartDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+            </div>
+          }
+          <div class="cart-summary cart-summary--total">
             <p>Total</p>
-            <strong>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+            <strong>{{ cartGrandTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
           </div>
 
           <div class="cart-modal__actions">
@@ -355,8 +361,18 @@
           }
 
           <div class="cart-summary">
+            <p>Subtotal</p>
+            <span>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+          </div>
+          @if (cartDeliveryFee() > 0) {
+            <div class="cart-summary">
+              <p>Taxa de entrega</p>
+              <span>{{ cartDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+            </div>
+          }
+          <div class="cart-summary cart-summary--total">
             <p>Total</p>
-            <strong>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+            <strong>{{ cartGrandTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
           </div>
 
           <div class="cart-modal__actions">

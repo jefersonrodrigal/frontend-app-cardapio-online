@@ -14,8 +14,10 @@ export interface CartItem {
 export class CartService {
   readonly items = signal<CartItem[]>([]);
   readonly isOpen = signal(false);
+  readonly deliveryFee = signal(0);
   readonly count = computed(() => this.items().reduce((sum, item) => sum + item.quantity, 0));
   readonly total = computed(() => this.items().reduce((sum, item) => sum + item.price * item.quantity, 0));
+  readonly grandTotal = computed(() => this.total() + this.deliveryFee());
 
   add(item: ProductDto): boolean {
     if (item.trackInventory && item.stockQuantity <= 0) {

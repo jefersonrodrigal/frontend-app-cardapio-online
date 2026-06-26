@@ -156,6 +156,11 @@
                 <label for="est-close">Fechamento</label>
                 <input id="est-close" type="time" name="estCloseTime" [(ngModel)]="estForm.closeTime" />
               </div>
+              <div class="field">
+                <label for="est-delivery-fee">Taxa de entrega (R$)</label>
+                <input id="est-delivery-fee" type="number" name="estDeliveryFee" min="0" step="0.01"
+                  [(ngModel)]="estForm.deliveryFee" placeholder="0,00" />
+              </div>
             </div>
             <div class="form-actions">
               <button type="submit" class="primary-button">
@@ -903,9 +908,9 @@
                       <i class="fa {{ sourceIcon(order.source) }}" aria-hidden="true"></i>
                       {{ sourceLabel(order.source) }}
                     </span>
-                    <span [class]="orderTypeBadgeClass(order.orderType)">
-                      <i class="fa {{ orderTypeIcon(order.orderType) }}" aria-hidden="true"></i>
-                      {{ orderTypeLabel(order.orderType) }}
+                    <span [class]="orderTypeBadgeClass(order.orderType ?? '')">
+                      <i class="fa {{ orderTypeIcon(order.orderType ?? '') }}" aria-hidden="true"></i>
+                      {{ orderTypeLabel(order.orderType ?? '') }}
                     </span>
                     <span [class]="orderStatusClass(order.status)">
                       {{ orderStatusLabel(order.status) }}
@@ -943,6 +948,11 @@
                     </span>
                   </div>
                   <div class="order-card__total-area">
+                    @if (order.deliveryFee > 0) {
+                      <span class="order-card__delivery-fee">
+                        + {{ order.deliveryFee | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }} entrega
+                      </span>
+                    }
                     <span class="order-card__total">
                       {{ order.total | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
                     </span>
@@ -1718,6 +1728,16 @@
               [(ngModel)]="internalOrderForm.note" placeholder="Ex: sem cebola, consumo no balcao..."></textarea>
           </div>
 
+          @if (internalOrderDeliveryFee() > 0) {
+            <div class="internal-order-total">
+              <span>Subtotal</span>
+              <span>{{ internalOrderSubtotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+            </div>
+            <div class="internal-order-total">
+              <span>Taxa de entrega</span>
+              <span>{{ internalOrderDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+            </div>
+          }
           <div class="internal-order-total">
             <span>Total</span>
             <strong>{{ internalOrderTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>

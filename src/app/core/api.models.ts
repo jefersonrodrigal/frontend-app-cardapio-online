@@ -16,6 +16,7 @@ export interface EstablishmentDto {
   whatsapp: string;
   openTime: string;
   closeTime: string;
+  deliveryFee: number;
 }
 
 export interface ProductDto {
@@ -94,11 +95,12 @@ export interface OrderDto {
   clientPhone: string;
   address: string;
   total: number;
+  deliveryFee: number;
   status: string;
   date: string;
   createdAt: string;
   source: string;
-  orderType: string;
+  orderType: string | null;
   note: string | null;
   items: OrderItemDto[];
 }

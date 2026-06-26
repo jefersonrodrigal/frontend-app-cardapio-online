@@ -70,6 +70,8 @@ export class Home {
   protected readonly isRestaurantOpen = computed(() => this.checkRestaurantOpen());
   protected readonly cartCount = this.cartService.count;
   protected readonly cartTotal = this.cartService.total;
+  protected readonly cartDeliveryFee = this.cartService.deliveryFee;
+  protected readonly cartGrandTotal = this.cartService.grandTotal;
   protected readonly cartEyebrow = computed(() =>
     this.cartStep() === 1 ? 'Pedido' : 'Cliente e entrega',
   );
@@ -98,6 +100,10 @@ export class Home {
   }
 
   protected readonly isClientAuthenticated = computed(() => this.authenticatedClient() !== null);
+
+  protected onImageError(event: Event): void {
+    (event.target as HTMLImageElement).style.display = 'none';
+  }
 
   protected addToCart(item: ProductDto): void {
     if (!this.cartService.add(item)) {
@@ -338,6 +344,7 @@ export class Home {
       clientPhone: this.customerPhone().trim(),
       address: this.address().trim(),
       source: 'site',
+      orderType: 'Entrega',
       items: this.cart().map((item) => ({
         productId: item.id,
         quantity: item.quantity,
@@ -510,6 +517,7 @@ export class Home {
     this.api.getEstablishment().subscribe({
       next: (establishment) => {
         this.establishment.set(establishment);
+        this.cartService.deliveryFee.set(establishment.deliveryFee ?? 0);
       },
       error: () => {
         this.loadError.set('Nao foi possivel carregar os dados do estabelecimento.');
