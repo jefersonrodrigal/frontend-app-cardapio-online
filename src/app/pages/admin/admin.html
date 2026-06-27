@@ -264,6 +264,49 @@
                       [(ngModel)]="prodForm.lowStockThreshold" min="0" step="1" placeholder="0" />
                   </div>
                 }
+                <div class="field field--wide">
+                  <label class="stock-toggle" for="prod-is-on-promotion">
+                    <input
+                      id="prod-is-on-promotion"
+                      type="checkbox"
+                      name="prodIsOnPromotion"
+                      [(ngModel)]="prodForm.isOnPromotion"
+                    />
+                    <span>
+                      Produto em promocao
+                      <small>Ativa o preco promocional no cardapio publico.</small>
+                    </span>
+                  </label>
+                </div>
+                @if (prodForm.isOnPromotion) {
+                  <div class="field">
+                    <label for="prod-discount-percent">Desconto (%)</label>
+                    <input
+                      id="prod-discount-percent"
+                      type="number"
+                      name="prodDiscountPercent"
+                      [ngModel]="prodForm.discountPercent"
+                      (ngModelChange)="onDiscountPercentChange($event)"
+                      step="0.1"
+                      min="0"
+                      max="99"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="prod-promotional-price">Preco promocional (R$)</label>
+                    <input
+                      id="prod-promotional-price"
+                      type="number"
+                      name="prodPromotionalPrice"
+                      [ngModel]="prodForm.promotionalPrice"
+                      (ngModelChange)="onPromotionalPriceChange($event)"
+                      step="0.01"
+                      min="0"
+                      placeholder="0,00"
+                    />
+                  </div>
+                }
                 <div class="field">
                   <label for="prod-image">URL da imagem</label>
                   <input id="prod-image" type="text" name="prodImage" [(ngModel)]="prodForm.image"
@@ -341,7 +384,16 @@
                     <p class="product-item__description">{{ product.description }}</p>
                   }
                   <span class="product-item__price">
-                    {{ product.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                    @if (product.isOnPromotion && product.promotionalPrice) {
+                      <span class="product-item__price--promo">
+                        {{ product.promotionalPrice | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                      </span>
+                      <span class="product-item__price--original">
+                        {{ product.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                      </span>
+                    } @else {
+                      {{ product.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                    }
                   </span>
                   <span [class]="inventoryStatusClass(product.stockStatus)">
                     {{ inventoryStatusLabel(product.stockStatus) }}
@@ -1654,17 +1706,20 @@
           <div class="form-grid">
             <div class="field">
               <label for="internal-order-type">Tipo</label>
-              <select id="internal-order-type" name="internalOrderType" [(ngModel)]="internalOrderForm.type">
+              <select id="internal-order-type" name="internalOrderType"
+                [ngModel]="internalOrderType()" (ngModelChange)="internalOrderType.set($event)">
                 <option value="ConsumoLocal">Consumo no local</option>
                 <option value="Retirada">Retirada no balcao</option>
                 <option value="Entrega">Entrega</option>
               </select>
             </div>
-            <div class="field">
-              <label for="internal-order-table">Mesa / comando</label>
-              <input id="internal-order-table" type="text" name="internalOrderTable"
-                [(ngModel)]="internalOrderForm.table" placeholder="Ex: Mesa 4" />
-            </div>
+            @if (internalOrderType() !== 'Entrega') {
+              <div class="field">
+                <label for="internal-order-table">Mesa / comando</label>
+                <input id="internal-order-table" type="text" name="internalOrderTable"
+                  [(ngModel)]="internalOrderForm.table" placeholder="Ex: Mesa 4" />
+              </div>
+            }
             <div class="field">
               <label for="internal-order-client">Cliente</label>
               <input id="internal-order-client" type="text" name="internalOrderClient"
@@ -1675,7 +1730,7 @@
               <input id="internal-order-phone" type="tel" name="internalOrderPhone"
                 [(ngModel)]="internalOrderForm.clientPhone" placeholder="Opcional" />
             </div>
-            @if (internalOrderForm.type === 'Entrega') {
+            @if (internalOrderType() === 'Entrega') {
               <div class="field field--wide">
                 <label for="internal-order-address">Endereco de entrega</label>
                 <input id="internal-order-address" type="text" name="internalOrderAddress"
@@ -1743,7 +1798,7 @@
               [(ngModel)]="internalOrderForm.note" placeholder="Ex: sem cebola, consumo no balcao..."></textarea>
           </div>
 
-          @if (internalOrderDeliveryFee() > 0) {
+          @if (internalOrderType() === 'Entrega') {
             <div class="internal-order-total">
               <span>Subtotal</span>
               <span>{{ internalOrderSubtotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>

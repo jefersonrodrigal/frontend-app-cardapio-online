@@ -32,6 +32,8 @@ export interface ProductDto {
   lowStockThreshold: number;
   isAvailable: boolean;
   stockStatus: string;
+  isOnPromotion: boolean;
+  promotionalPrice: number | null;
 }
 
 export interface ClientDto {
@@ -136,6 +138,8 @@ export interface ProductPayload {
   trackInventory: boolean;
   stockQuantity: number;
   lowStockThreshold: number;
+  isOnPromotion: boolean;
+  promotionalPrice: number | null;
 }
 
 export interface LoginRequest {

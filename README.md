@@ -9,15 +9,17 @@ O frontend cobre dois fluxos principais:
 **Cardapio publico (`/`)**
 - Exibe dados do estabelecimento (nome, logo, horarios, status aberto/fechado)
 - Renderiza secoes de produtos agrupadas por categoria, com paginacao por secao
+- Produtos em promocao exibem badge, preco promocional em destaque e preco original riscado
 - Carrinho lateral com fluxo de checkout em duas etapas (itens → dados do cliente)
-- Exibe subtotal, taxa de entrega (quando configurada) e total final no carrinho
+- Exibe subtotal, taxa de entrega (somente quando ha itens e taxa maior que zero) e total final no carrinho
+- Itens em promocao no carrinho exibem tag "Promo" e preco original riscado
 - Busca de endereco via CEP (ViaCEP)
 - Acesso rapido para clientes cadastrados
 
 **Painel administrativo (`/admin`)**
 - Protegido por JWT Bearer
 - Gerenciamento de categorias (CRUD com slug auto-gerado)
-- Gerenciamento de produtos vinculados a categorias
+- Gerenciamento de produtos vinculados a categorias com suporte a promocao (desconto em % ou valor absoluto, com sincronizacao automatica entre os dois campos)
 - Visualizacao de clientes cadastrados
 - Acompanhamento e avanco de status de pedidos com badge do tipo (Entrega / Retirada / Consumo local) e taxa de entrega destacada nos cards
 - Configuracoes do estabelecimento com upload de logo e campo de taxa de entrega
@@ -159,7 +161,7 @@ A paginacao de cada secao e independente e armazenada em `Record<string, number>
 | Aba | Descricao |
 |---|---|
 | Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp, horario e taxa de entrega |
-| Produtos | CRUD de produtos com upload de imagem; categoria selecionada via lista dinamica |
+| Produtos | CRUD de produtos com upload de imagem; categoria selecionada via lista dinamica; suporte a promocao com campos sincronizados de desconto percentual e preco promocional |
 | Categorias | CRUD de categorias; slug auto-gerado e imutavel |
 | Clientes | Listagem somente leitura |
 | Pedidos | Acompanhamento com avanco de status e cancelamento; filtro por data; badge de tipo do pedido e taxa de entrega exibida nos cards |
@@ -225,6 +227,13 @@ interface ProductDto {
   price: number;
   category: string;  // slug da categoria
   imageUrl: string;
+  trackInventory: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  isAvailable: boolean;
+  stockStatus: string;
+  isOnPromotion: boolean;
+  promotionalPrice: number | null;
 }
 
 interface EstablishmentDto {
@@ -265,8 +274,8 @@ A taxa de entrega e configurada pelo administrador na aba **Estabelecimento** do
 ### Fluxo no cardapio publico
 
 1. A home carrega os dados do estabelecimento e seta `CartService.deliveryFee` com o valor recebido.
-2. O carrinho exibe tres linhas quando a taxa e maior que zero: **Subtotal**, **Taxa de entrega** e **Total**.
-3. Quando a taxa e zero, apenas o **Total** e exibido (sem linhas intermediarias).
+2. O carrinho exibe a linha **Taxa de entrega** apenas quando ha itens no carrinho e a taxa e maior que zero.
+3. O **Total** (grandTotal) tambem so inclui a taxa quando ha itens; carrinho vazio exibe Total R$0,00.
 4. Ao finalizar o pedido, o payload envia `orderType: 'Entrega'`; o backend busca a taxa atual do estabelecimento, aplica ao pedido e grava o snapshot em `Order.DeliveryFee`.
 
 ### Fluxo no painel administrativo
@@ -278,15 +287,65 @@ O registro interno de pedidos recalcula o total conforme o tipo selecionado:
 
 O total exibido no formulario interno ja reflete a taxa antes de salvar. Nos cards de pedidos existentes, quando `order.deliveryFee > 0`, uma linha informativa mostra o valor da taxa separado do total.
 
+## Promocao de produtos
+
+### Configuracao no painel administrativo
+
+Na aba **Produtos**, ao criar ou editar um produto, e possivel habilitar a promocao com o toggle **Produto em promocao**. Ao ativar:
+
+- aparece o campo **Desconto (%)** e o campo **Preco promocional (R$)**
+- os dois campos sao sincronizados em tempo real: preencher um calcula o outro automaticamente
+- apenas o `promotionalPrice` e enviado ao backend; o percentual e calculado localmente
+- ao editar um produto ja em promocao, o percentual e preenchido automaticamente
+
+Regras de validacao aplicadas pelo backend:
+
+- `promotionalPrice` e obrigatorio quando `isOnPromotion = true`
+- `promotionalPrice` deve ser maior que zero e menor que `price`
+
+### Exibicao no cardapio publico
+
+Produtos em promocao exibem:
+
+- badge **Promocao** sobre a imagem do card
+- preco promocional em destaque (vermelho)
+- preco original riscado abaixo
+
+No carrinho, itens em promocao exibem:
+
+- tag **Promo** ao lado do nome
+- preco original riscado abaixo do preco pago
+
+### Impacto no pedido
+
+O `CartService.add()` usa o `promotionalPrice` como preco efetivo quando `isOnPromotion = true`. Esse preco e o valor enviado no payload de criacao do pedido e gravado como `UnitPrice` no `OrderItem`. O preco original fica disponivel apenas no frontend para exibicao.
+
 ### CartService — signals expostos
 
 ```typescript
 items: Signal<CartItem[]>
 deliveryFee: WritableSignal<number>   // setado ao carregar o estabelecimento
 total: Signal<number>                 // soma dos itens (sem taxa)
-grandTotal: Signal<number>            // total + deliveryFee
+grandTotal: Signal<number>            // total + deliveryFee (0 quando carrinho vazio)
 count: Signal<number>
 ```
+
+`CartItem` inclui os campos:
+
+```typescript
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;         // preco efetivo (promocional ou normal)
+  originalPrice: number; // preco original, para exibicao do riscado
+  isOnPromotion: boolean;
+  quantity: number;
+  trackInventory: boolean;
+  stockQuantity: number;
+}
+```
+
+`grandTotal` so adiciona a taxa de entrega quando ha ao menos um item no carrinho, evitando exibir o valor da taxa no Total quando o carrinho esta vazio.
 
 ## Localizacao
 

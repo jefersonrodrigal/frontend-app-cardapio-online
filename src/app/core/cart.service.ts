@@ -5,6 +5,8 @@ export interface CartItem {
   id: string;
   name: string;
   price: number;
+  originalPrice: number;
+  isOnPromotion: boolean;
   quantity: number;
   trackInventory: boolean;
   stockQuantity: number;
@@ -17,12 +19,17 @@ export class CartService {
   readonly deliveryFee = signal(0);
   readonly count = computed(() => this.items().reduce((sum, item) => sum + item.quantity, 0));
   readonly total = computed(() => this.items().reduce((sum, item) => sum + item.price * item.quantity, 0));
-  readonly grandTotal = computed(() => this.total() + this.deliveryFee());
+  readonly grandTotal = computed(() =>
+    this.items().length > 0 ? this.total() + this.deliveryFee() : 0,
+  );
 
   add(item: ProductDto): boolean {
     if (item.trackInventory && item.stockQuantity <= 0) {
       return false;
     }
+
+    const effectivePrice =
+      item.isOnPromotion && item.promotionalPrice ? item.promotionalPrice : item.price;
 
     let added = false;
 
@@ -53,7 +60,9 @@ export class CartService {
         {
           id: item.id,
           name: item.name,
-          price: item.price,
+          price: effectivePrice,
+          originalPrice: item.price,
+          isOnPromotion: item.isOnPromotion && !!item.promotionalPrice,
           quantity: 1,
           trackInventory: item.trackInventory,
           stockQuantity: item.stockQuantity,

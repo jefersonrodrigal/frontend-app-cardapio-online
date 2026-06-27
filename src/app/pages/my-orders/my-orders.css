@@ -103,6 +103,14 @@
   justify-content: space-between;
 }
 
+.order-items__unit-price {
+  color: #71717a;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 400;
+  margin-top: 0.1rem;
+}
+
 .order-card__header h2 {
   font-size: clamp(1.4rem, 3vw, 2rem);
   line-height: 1.1;

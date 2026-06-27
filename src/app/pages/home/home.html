@@ -85,6 +85,9 @@
           <div class="menu-grid">
             @for (item of getPaginatedProducts(section.category.slug); track item.id) {
               <article class="menu-card" [ngClass]="canAddProduct(item) ? '' : 'menu-card--unavailable'">
+                @if (item.isOnPromotion && item.promotionalPrice) {
+                  <span class="menu-card__promo-badge">Promocao</span>
+                }
                 <div class="menu-card__media">
                   @if (item.imageUrl) {
                     <img
@@ -110,7 +113,16 @@
 
                   <div class="menu-card__footer">
                     <p class="menu-card__price">
-                      {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                      @if (item.isOnPromotion && item.promotionalPrice) {
+                        <span class="menu-card__price--promo">
+                          {{ item.promotionalPrice | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                        </span>
+                        <span class="menu-card__price--original">
+                          {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                        </span>
+                      } @else {
+                        {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                      }
                     </p>
                     <button
                       type="button"
@@ -193,9 +205,19 @@
               @for (item of cart(); track item.id) {
                 <article class="cart-item">
                   <div class="cart-item__info">
-                    <strong class="cart-item__name">{{ item.name }}</strong>
+                    <strong class="cart-item__name">
+                      {{ item.name }}
+                      @if (item.isOnPromotion) {
+                        <span class="cart-item__promo-tag">Promo</span>
+                      }
+                    </strong>
                     <p class="cart-item__unit-price">
                       {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }} un.
+                      @if (item.isOnPromotion) {
+                        <span class="cart-item__original-price">
+                          {{ item.originalPrice | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                        </span>
+                      }
                     </p>
                   </div>
 
@@ -234,7 +256,7 @@
             <p>Subtotal</p>
             <span>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
           </div>
-          @if (cartDeliveryFee() > 0) {
+          @if (cart().length > 0 && cartDeliveryFee() > 0) {
             <div class="cart-summary">
               <p>Taxa de entrega</p>
               <span>{{ cartDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
@@ -364,7 +386,7 @@
             <p>Subtotal</p>
             <span>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
           </div>
-          @if (cartDeliveryFee() > 0) {
+          @if (cart().length > 0 && cartDeliveryFee() > 0) {
             <div class="cart-summary">
               <p>Taxa de entrega</p>
               <span>{{ cartDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>

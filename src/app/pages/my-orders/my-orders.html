@@ -66,7 +66,12 @@
             <div class="order-items">
               @for (item of order.items; track item.productId || item.productName) {
                 <div class="order-items__row">
-                  <span>{{ item.quantity }}x {{ item.productName }}</span>
+                  <span>
+                    {{ item.quantity }}x {{ item.productName }}
+                    <small class="order-items__unit-price">
+                      {{ item.unitPrice | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }} un.
+                    </small>
+                  </span>
                   <strong>{{ item.subtotal | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
                 </div>
               }

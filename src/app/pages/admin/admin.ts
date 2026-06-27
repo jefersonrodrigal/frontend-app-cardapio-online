@@ -85,6 +85,7 @@ export class Admin {
   protected readonly isLoadingIntegrations = signal(false);
   protected readonly integrationSaved = signal('');
   protected readonly isSavingInternalOrder = signal(false);
+  protected readonly internalOrderType = signal<InternalOrderType>('ConsumoLocal');
 
   protected readonly productsPage = signal(1);
   protected readonly inventoryPage = signal(1);
@@ -233,7 +234,7 @@ export class Admin {
     this.internalOrderItems().reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
   );
   protected readonly internalOrderDeliveryFee = computed(() =>
-    this.internalOrderForm.type === 'Entrega' ? (this.estForm.deliveryFee ?? 0) : 0,
+    this.internalOrderType() === 'Entrega' ? (this.estForm.deliveryFee ?? 0) : 0,
   );
   protected readonly internalOrderTotal = computed(
     () => this.internalOrderSubtotal() + this.internalOrderDeliveryFee(),
@@ -260,6 +261,9 @@ export class Admin {
     trackInventory: false,
     stockQuantity: 0,
     lowStockThreshold: 0,
+    isOnPromotion: false,
+    promotionalPrice: 0,
+    discountPercent: 0,
   };
 
   protected inventoryForm = {
@@ -474,7 +478,7 @@ export class Admin {
       return;
     }
 
-    if (this.internalOrderForm.type === 'Entrega' && !this.internalOrderForm.address.trim()) {
+    if (this.internalOrderType() === 'Entrega' && !this.internalOrderForm.address.trim()) {
       this.internalOrderError.set('Informe o endereco para pedidos de entrega.');
       return;
     }
@@ -490,7 +494,7 @@ export class Admin {
         quantity: item.quantity,
       })),
       note: this.internalOrderNote(),
-      orderType: this.internalOrderForm.type,
+      orderType: this.internalOrderType(),
       trackingBaseUrl: globalThis.location?.origin ?? null,
     };
 
@@ -629,6 +633,28 @@ export class Admin {
     });
   }
 
+  protected onPromotionalPriceChange(raw: string): void {
+    const promo = parseFloat(raw);
+    const price = Number(this.prodForm.price);
+    this.prodForm.promotionalPrice = isNaN(promo) ? 0 : promo;
+    if (price > 0 && promo > 0 && promo < price) {
+      this.prodForm.discountPercent = Math.round((1 - promo / price) * 1000) / 10;
+    } else {
+      this.prodForm.discountPercent = 0;
+    }
+  }
+
+  protected onDiscountPercentChange(raw: string): void {
+    const pct = parseFloat(raw);
+    const price = Number(this.prodForm.price);
+    this.prodForm.discountPercent = isNaN(pct) ? 0 : pct;
+    if (price > 0 && pct > 0 && pct < 100) {
+      this.prodForm.promotionalPrice = Math.round(price * (1 - pct / 100) * 100) / 100;
+    } else {
+      this.prodForm.promotionalPrice = 0;
+    }
+  }
+
   protected openAddProduct(): void {
     const firstSlug = this.categories()[0]?.slug ?? 'outro';
     this.editingProductId.set(null);
@@ -642,6 +668,9 @@ export class Admin {
       trackInventory: false,
       stockQuantity: 0,
       lowStockThreshold: 0,
+      isOnPromotion: false,
+      promotionalPrice: 0,
+      discountPercent: 0,
     };
     this.showProductForm.set(true);
   }
@@ -658,6 +687,13 @@ export class Admin {
       trackInventory: product.trackInventory,
       stockQuantity: product.stockQuantity,
       lowStockThreshold: product.lowStockThreshold,
+      isOnPromotion: product.isOnPromotion,
+      promotionalPrice: product.promotionalPrice ?? 0,
+      discountPercent: (() => {
+        const p = product.price;
+        const promo = product.promotionalPrice;
+        return p > 0 && promo && promo < p ? Math.round((1 - promo / p) * 1000) / 10 : 0;
+      })(),
     };
     this.showProductForm.set(true);
   }
@@ -674,6 +710,10 @@ export class Admin {
       trackInventory: this.prodForm.trackInventory,
       stockQuantity: Math.max(0, Number(this.prodForm.stockQuantity) || 0),
       lowStockThreshold: Math.max(0, Number(this.prodForm.lowStockThreshold) || 0),
+      isOnPromotion: this.prodForm.isOnPromotion,
+      promotionalPrice: this.prodForm.isOnPromotion
+        ? Math.max(0, Number(this.prodForm.promotionalPrice) || 0)
+        : null,
     };
 
     const editingId = this.editingProductId();
@@ -969,7 +1009,7 @@ export class Admin {
 
   protected logout(): void {
     this.auth.logout();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/home']);
   }
 
   protected saveIFood(): void {
@@ -1096,6 +1136,7 @@ export class Admin {
   }
 
   private resetInternalOrderForm(): void {
+    this.internalOrderType.set('ConsumoLocal');
     this.internalOrderForm = {
       clientName: 'Cliente interno',
       clientPhone: '',
@@ -1123,11 +1164,11 @@ export class Admin {
   private internalOrderAddress(): string {
     const table = this.internalOrderForm.table.trim();
 
-    if (this.internalOrderForm.type === 'Entrega') {
+    if (this.internalOrderType() === 'Entrega') {
       return this.internalOrderForm.address.trim();
     }
 
-    if (this.internalOrderForm.type === 'Retirada') {
+    if (this.internalOrderType() === 'Retirada') {
       return 'Retirada no balcao';
     }
 
