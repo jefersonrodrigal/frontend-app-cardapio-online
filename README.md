@@ -8,6 +8,7 @@ O frontend cobre dois fluxos principais:
 
 **Cardapio publico (`/`)**
 - Exibe dados do estabelecimento (nome, logo, horarios, status aberto/fechado)
+- Exibe icones clicaveis de redes sociais no hero (Instagram, Facebook, TikTok, X/Twitter) quando o link estiver preenchido no painel administrativo
 - Renderiza secoes de produtos agrupadas por categoria, com paginacao por secao
 - Produtos em promocao exibem badge, preco promocional em destaque e preco original riscado
 - Carrinho lateral com fluxo de checkout em duas etapas (itens → dados do cliente)
@@ -160,7 +161,7 @@ A paginacao de cada secao e independente e armazenada em `Record<string, number>
 
 | Aba | Descricao |
 |---|---|
-| Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp, horario e taxa de entrega |
+| Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp, horario, taxa de entrega e links de redes sociais (Instagram, Facebook, TikTok, X/Twitter) |
 | Produtos | CRUD de produtos com upload de imagem; categoria selecionada via lista dinamica; suporte a promocao com campos sincronizados de desconto percentual e preco promocional |
 | Categorias | CRUD de categorias; slug auto-gerado e imutavel |
 | Clientes | Listagem somente leitura |
@@ -244,7 +245,12 @@ interface EstablishmentDto {
   whatsapp: string;
   openTime: string;
   closeTime: string;
-  deliveryFee: number;  // taxa de entrega em reais; 0 = sem taxa
+  deliveryFee: number;          // taxa de entrega em reais; 0 = sem taxa
+  sendOrderTrackingViaWhatsApp: boolean;
+  instagramUrl?: string | null; // exibido como icone no hero do cardapio publico
+  facebookUrl?: string | null;
+  tikTokUrl?: string | null;
+  twitterUrl?: string | null;
 }
 
 interface OrderDto {

@@ -18,6 +18,10 @@ export interface EstablishmentDto {
   closeTime: string;
   deliveryFee: number;
   sendOrderTrackingViaWhatsApp: boolean;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  tikTokUrl?: string | null;
+  twitterUrl?: string | null;
 }
 
 export interface ProductDto {

@@ -25,6 +25,30 @@
           {{ establishment()?.closeTime ?? '--:--' }}
         </span>
       </div>
+      @if (establishment()?.instagramUrl || establishment()?.facebookUrl || establishment()?.tikTokUrl || establishment()?.twitterUrl) {
+        <div class="hero__social">
+          @if (establishment()?.instagramUrl) {
+            <a class="hero__social-link" [href]="establishment()!.instagramUrl!" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+            </a>
+          }
+          @if (establishment()?.facebookUrl) {
+            <a class="hero__social-link" [href]="establishment()!.facebookUrl!" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              <i class="fa-brands fa-facebook" aria-hidden="true"></i>
+            </a>
+          }
+          @if (establishment()?.tikTokUrl) {
+            <a class="hero__social-link" [href]="establishment()!.tikTokUrl!" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+              <i class="fa-brands fa-tiktok" aria-hidden="true"></i>
+            </a>
+          }
+          @if (establishment()?.twitterUrl) {
+            <a class="hero__social-link" [href]="establishment()!.twitterUrl!" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)">
+              <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+            </a>
+          }
+        </div>
+      }
     </div>
   </header>
 

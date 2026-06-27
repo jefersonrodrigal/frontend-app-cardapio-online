@@ -250,6 +250,10 @@ export class Admin {
     closeTime: '22:00',
     deliveryFee: 0,
     sendOrderTrackingViaWhatsApp: false,
+    instagramUrl: '',
+    facebookUrl: '',
+    tikTokUrl: '',
+    twitterUrl: '',
   };
 
   protected prodForm = {

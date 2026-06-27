@@ -176,6 +176,44 @@
                   </span>
                 </label>
               </div>
+              <div class="field field--wide">
+                <p class="form-section-label">
+                  <i class="fa fa-share-nodes" aria-hidden="true"></i>
+                  Redes sociais
+                </p>
+              </div>
+              <div class="field">
+                <label for="est-instagram">
+                  <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+                  Instagram
+                </label>
+                <input id="est-instagram" type="url" name="estInstagramUrl" [(ngModel)]="estForm.instagramUrl"
+                  placeholder="https://instagram.com/seuestabelecimento" />
+              </div>
+              <div class="field">
+                <label for="est-facebook">
+                  <i class="fa-brands fa-facebook" aria-hidden="true"></i>
+                  Facebook
+                </label>
+                <input id="est-facebook" type="url" name="estFacebookUrl" [(ngModel)]="estForm.facebookUrl"
+                  placeholder="https://facebook.com/seuestabelecimento" />
+              </div>
+              <div class="field">
+                <label for="est-tiktok">
+                  <i class="fa-brands fa-tiktok" aria-hidden="true"></i>
+                  TikTok
+                </label>
+                <input id="est-tiktok" type="url" name="estTikTokUrl" [(ngModel)]="estForm.tikTokUrl"
+                  placeholder="https://tiktok.com/@seuestabelecimento" />
+              </div>
+              <div class="field">
+                <label for="est-twitter">
+                  <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+                  X (Twitter)
+                </label>
+                <input id="est-twitter" type="url" name="estTwitterUrl" [(ngModel)]="estForm.twitterUrl"
+                  placeholder="https://x.com/seuestabelecimento" />
+              </div>
             </div>
             <div class="form-actions">
               <button type="submit" class="primary-button">
