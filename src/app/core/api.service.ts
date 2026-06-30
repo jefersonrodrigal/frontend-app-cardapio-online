@@ -1,6 +1,10 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import {
+  AdditionalGroupDto,
+  AdditionalGroupPayload,
+  AdditionalItemDto,
+  AdditionalItemPayload,
   AiAgentsIntegrationDto,
   AnotaiIntegrationDto,
   CategoryDto,
@@ -180,6 +184,34 @@ export class ApiService {
 
   deleteCategory(id: number) {
     return this.http.delete<void>(`${this.baseUrl}/Categories/${id}`);
+  }
+
+  getAdditionalGroups(productId: string) {
+    return this.http.get<AdditionalGroupDto[]>(`${this.baseUrl}/Products/${productId}/additional-groups`);
+  }
+
+  createAdditionalGroup(productId: string, payload: AdditionalGroupPayload) {
+    return this.http.post<AdditionalGroupDto>(`${this.baseUrl}/Products/${productId}/additional-groups`, payload);
+  }
+
+  updateAdditionalGroup(productId: string, groupId: string, payload: AdditionalGroupPayload) {
+    return this.http.put<AdditionalGroupDto>(`${this.baseUrl}/Products/${productId}/additional-groups/${groupId}`, payload);
+  }
+
+  deleteAdditionalGroup(productId: string, groupId: string) {
+    return this.http.delete<void>(`${this.baseUrl}/Products/${productId}/additional-groups/${groupId}`);
+  }
+
+  createAdditionalItem(productId: string, groupId: string, payload: Omit<AdditionalItemPayload, 'isAvailable'> & { sortOrder?: number }) {
+    return this.http.post<AdditionalItemDto>(`${this.baseUrl}/Products/${productId}/additional-groups/${groupId}/items`, payload);
+  }
+
+  updateAdditionalItem(productId: string, groupId: string, itemId: string, payload: AdditionalItemPayload) {
+    return this.http.put<AdditionalItemDto>(`${this.baseUrl}/Products/${productId}/additional-groups/${groupId}/items/${itemId}`, payload);
+  }
+
+  deleteAdditionalItem(productId: string, groupId: string, itemId: string) {
+    return this.http.delete<void>(`${this.baseUrl}/Products/${productId}/additional-groups/${groupId}/items/${itemId}`);
   }
 
   getIntegrations() {

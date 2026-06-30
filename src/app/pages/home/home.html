@@ -226,7 +226,7 @@
             @if (cart().length === 0) {
               <p class="cart-items__empty">Seu carrinho ainda esta vazio.</p>
             } @else {
-              @for (item of cart(); track item.id) {
+              @for (item of cart(); track item.cartKey) {
                 <article class="cart-item">
                   <div class="cart-item__info">
                     <strong class="cart-item__name">
@@ -243,6 +243,19 @@
                         </span>
                       }
                     </p>
+                    @if (item.additionals.length > 0) {
+                      <ul class="cart-item__additionals">
+                        @for (a of item.additionals; track a.additionalItemId) {
+                          <li>+ {{ a.name }}
+                            @if (a.price > 0) {
+                              <span class="cart-item__additional-price">
+                                ({{ a.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }})
+                              </span>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    }
                   </div>
 
                   <div class="cart-item__controls">
@@ -250,7 +263,7 @@
                       <button
                         type="button"
                         class="qty-button"
-                        (click)="removeFromCart(item.id)"
+                        (click)="removeFromCart(item.cartKey)"
                         aria-label="Diminuir quantidade de {{ item.name }}"
                       >-</button>
                       <span class="qty-value">{{ item.quantity }}</span>
@@ -258,14 +271,14 @@
                         type="button"
                         class="qty-button"
                         [disabled]="isCartItemAtStockLimit(item)"
-                        (click)="incrementInCart(item.id)"
+                        (click)="incrementInCart(item.cartKey)"
                         aria-label="Aumentar quantidade de {{ item.name }}"
                       >+</button>
                     </div>
                     <button
                       type="button"
                       class="cart-item__delete"
-                      (click)="deleteFromCart(item.id)"
+                      (click)="deleteFromCart(item.cartKey)"
                       [attr.aria-label]="'Remover ' + item.name + ' do carrinho'"
                     >
                       <i class="fa fa-trash" aria-hidden="true"></i>
@@ -430,6 +443,138 @@
             </button>
           </div>
         }
+      </section>
+    </div>
+  }
+
+  @if (productModal()) {
+    <div class="modal-backdrop" (click)="closeProductModal()">
+      <section class="product-modal" (click)="$event.stopPropagation()">
+
+        <div class="product-modal__header">
+          @if (productModal()!.imageUrl) {
+            <img
+              class="product-modal__image"
+              [src]="productModal()!.imageUrl"
+              [alt]="productModal()!.name"
+            />
+          }
+          <div class="product-modal__header-info">
+            <span class="section__eyebrow">Personalize seu pedido</span>
+            <h2 class="product-modal__title">{{ productModal()!.name }}</h2>
+            @if (productModal()!.description) {
+              <p class="product-modal__desc">{{ productModal()!.description }}</p>
+            }
+            <p class="product-modal__base-price">
+              @if (productModal()!.isOnPromotion && productModal()!.promotionalPrice) {
+                <span>{{ productModal()!.promotionalPrice | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+                <span class="product-modal__base-price--original">{{ productModal()!.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+              } @else {
+                {{ productModal()!.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+              }
+            </p>
+          </div>
+          <button type="button" class="cart-modal__close product-modal__close" (click)="closeProductModal()">
+            Fechar
+          </button>
+        </div>
+
+        <div class="product-modal__body">
+          @for (group of productModal()!.additionalGroups; track group.id) {
+            <div class="additional-group">
+              <div class="additional-group__header">
+                <div>
+                  <p class="additional-group__name">{{ group.name }}</p>
+                  @if (group.minSelections > 0) {
+                    <p class="additional-group__subtitle">
+                      Escolha {{ group.minSelections === group.maxSelections ? group.minSelections : 'de ' + group.minSelections + ' a ' + group.maxSelections }}
+                      {{ group.minSelections === 1 && group.maxSelections === 1 ? 'opcao' : 'opcoes' }}
+                    </p>
+                  } @else {
+                    <p class="additional-group__subtitle">
+                      Ate {{ group.maxSelections }} {{ group.maxSelections === 1 ? 'opcao' : 'opcoes' }} (opcional)
+                    </p>
+                  }
+                </div>
+                @if (group.minSelections > 0) {
+                  @if (isModalGroupValid(group)) {
+                    <span class="additional-group__badge additional-group__badge--ok">
+                      <i class="fa fa-check" aria-hidden="true"></i> Pronto
+                    </span>
+                  } @else {
+                    <span class="additional-group__badge additional-group__badge--required">Obrigatorio</span>
+                  }
+                } @else {
+                  <span class="additional-group__badge">Opcional</span>
+                }
+              </div>
+
+              <ul class="additional-items-list">
+                @for (item of group.items; track item.id) {
+                  @if (item.isAvailable) {
+                    <li
+                      class="additional-item"
+                      [class.additional-item--selected]="(modalSelections()[item.id] ?? 0) > 0"
+                      (click)="group.maxSelections === 1 && selectRadioItem(item.id, group)"
+                    >
+                      <div class="additional-item__info">
+                        <span class="additional-item__name">{{ item.name }}</span>
+                        @if (item.price > 0) {
+                          <span class="additional-item__price">+ {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+                        } @else {
+                          <span class="additional-item__price additional-item__price--free">Gratis</span>
+                        }
+                      </div>
+                      @if (group.maxSelections === 1) {
+                        <span
+                          class="additional-item__radio"
+                          [class.additional-item__radio--checked]="(modalSelections()[item.id] ?? 0) > 0"
+                          role="radio"
+                          [attr.aria-checked]="(modalSelections()[item.id] ?? 0) > 0"
+                        ></span>
+                      } @else {
+                        <div class="cart-item__qty" (click)="$event.stopPropagation()">
+                          <button
+                            type="button"
+                            class="qty-button qty-button--sm"
+                            [disabled]="(modalSelections()[item.id] ?? 0) === 0"
+                            (click)="setModalSelection(item.id, group, -1)"
+                          >&#8722;</button>
+                          <span class="qty-value qty-value--sm">{{ modalSelections()[item.id] ?? 0 }}</span>
+                          <button
+                            type="button"
+                            class="qty-button qty-button--sm"
+                            [disabled]="modalGroupSelectionCount(group) >= group.maxSelections"
+                            (click)="setModalSelection(item.id, group, 1)"
+                          >+</button>
+                        </div>
+                      }
+                    </li>
+                  }
+                }
+              </ul>
+            </div>
+          }
+        </div>
+
+        <div class="product-modal__footer">
+          <div class="product-modal__total">
+            <span class="product-modal__total-label">Total</span>
+            <strong class="product-modal__total-value">
+              {{ modalTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+            </strong>
+          </div>
+          <button
+            type="button"
+            class="cart-action product-modal__confirm"
+            [disabled]="!canConfirmModal()"
+            (click)="confirmProductModal()"
+          >
+            <i class="fa fa-cart-plus" aria-hidden="true"></i>
+            Adicionar ao carrinho
+          </button>
+        </div>
+
       </section>
     </div>
   }

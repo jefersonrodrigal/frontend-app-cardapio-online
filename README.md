@@ -11,7 +11,9 @@ O frontend cobre dois fluxos principais:
 - Exibe icones clicaveis de redes sociais no hero (Instagram, Facebook, TikTok, X/Twitter) quando o link estiver preenchido no painel administrativo
 - Renderiza secoes de produtos agrupadas por categoria, com paginacao por secao
 - Produtos em promocao exibem badge, preco promocional em destaque e preco original riscado
+- Ao clicar em um produto que possui grupos de adicionais, abre um modal de personalizacao com selecao de itens por grupo, validacao de obrigatoriedade e total atualizado em tempo real
 - Carrinho lateral com fluxo de checkout em duas etapas (itens → dados do cliente)
+- Itens no carrinho exibem a lista de adicionais selecionados abaixo do nome
 - Exibe subtotal, taxa de entrega (somente quando ha itens e taxa maior que zero) e total final no carrinho
 - Itens em promocao no carrinho exibem tag "Promo" e preco original riscado
 - Busca de endereco via CEP (ViaCEP)
@@ -21,6 +23,7 @@ O frontend cobre dois fluxos principais:
 - Protegido por JWT Bearer
 - Gerenciamento de categorias (CRUD com slug auto-gerado)
 - Gerenciamento de produtos vinculados a categorias com suporte a promocao (desconto em % ou valor absoluto, com sincronizacao automatica entre os dois campos)
+- Gerenciamento de grupos de adicionais por produto: criar, editar e excluir grupos; criar, editar, excluir e ativar/desativar itens dentro de cada grupo
 - Visualizacao de clientes cadastrados
 - Acompanhamento e avanco de status de pedidos com badge do tipo (Entrega / Retirada / Consumo local) e taxa de entrega destacada nos cards
 - Configuracoes do estabelecimento com upload de logo e campo de taxa de entrega
@@ -121,12 +124,15 @@ Regras de protecao por rota:
 | `/Estabelecimento` | publico | protegido |
 | `/Categories` | publico | protegido |
 | `/Products` | publico | protegido |
+| `/Products/{id}/additional-groups` | publico | protegido |
 | `/Clients/authenticate` | — | publico |
 | `/Clients` | protegido | publico |
 | `/Orders` | protegido | publico (POST) / protegido (PUT) |
 | `/Integrations` | protegido | protegido |
 
 Ao receber `401`, o interceptor faz logout automatico e redireciona para `/login`.
+
+> Os endpoints de additional-groups sao subrecursos de `/Products`, portanto herdam a mesma regra: GET publico, mutacoes protegidas. As URLs no `ApiService` usam `/Products/` (maiusculo) para garantir a correspondencia com a verificacao em `isProtectedApiRequest`.
 
 ### Clientes
 
@@ -157,12 +163,77 @@ categorias (ordenadas por SortOrder)
 
 A paginacao de cada secao e independente e armazenada em `Record<string, number>` por slug de categoria.
 
+## Grupos de adicionais — fluxo no cardapio publico
+
+Os grupos de adicionais sao retornados diretamente no `ProductDto` (campo `additionalGroups`), sem chamada adicional.
+
+### Abertura do modal
+
+Ao clicar em "Adicionar" num produto que possui `additionalGroups.length > 0`, a home abre um modal de personalizacao em vez de adicionar direto ao carrinho.
+
+O modal exibe:
+
+- foto do produto (thumbnail), nome, descricao e preco base
+- para cada grupo: nome, subtitulo com limites (ex: "Ate 2 opcoes (opcional)") e badge de status ("Obrigatorio" laranja / "Pronto" verde / "Opcional" cinza)
+- para grupos com `maxSelections = 1`: radio customizado — clicar em qualquer parte da linha seleciona o item
+- para grupos com `maxSelections > 1`: stepper com botoes +/−
+- total atualizado em tempo real (base + adicionais)
+- botao "Adicionar ao carrinho" habilitado apenas quando todos os grupos obrigatorios estiverem satisfeitos
+
+### Signals do modal em `home.ts`
+
+```typescript
+productModal: WritableSignal<ProductDto | null>
+modalSelections: WritableSignal<Partial<Record<string, number>>>  // itemId → quantidade
+baseModalPrice: Signal<number>        // preco efetivo do produto (promocional ou normal)
+modalAdditionalsTotal: Signal<number> // soma dos adicionais selecionados
+modalTotal: Signal<number>            // baseModalPrice + modalAdditionalsTotal
+```
+
+Metodos principais:
+
+```typescript
+openProductModal(product)                        // abre o modal
+closeProductModal()                              // fecha e limpa selecoes
+selectRadioItem(itemId, group)                   // selecao exclusiva (maxSelections = 1)
+setModalSelection(itemId, group, delta)          // incrementa/decrementa item (maxSelections > 1)
+modalGroupSelectionCount(group): number          // quantos itens selecionados no grupo
+isModalGroupValid(group): boolean                // minSelections atendido
+canConfirmModal(): boolean                       // todos os grupos validos
+confirmProductModal()                            // cria CartItemAdditional[] e chama cartService.add()
+```
+
+### CartKey — identificacao unica de item no carrinho
+
+O mesmo produto com adicionais diferentes gera entradas separadas no carrinho. A chave e calculada por `buildCartKey`:
+
+- sem adicionais: `productId`
+- com adicionais: `productId|itemId1:qty,itemId2:qty,...` (ids ordenados)
+
+Isso permite que "X-Burger sem adicional" e "X-Burger com Segunda Carne" coexistam no carrinho como itens distintos.
+
+## Grupos de adicionais — gestao no painel administrativo
+
+Ao editar um produto, a secao **Grupos de Adicionais** aparece abaixo do formulario principal. Os grupos e itens sao carregados automaticamente via `GET /api/Products/{id}/additional-groups`.
+
+Operacoes disponiveis:
+
+- **Novo grupo**: define nome, minimo, maximo e ordem
+- **Editar grupo**: atualiza qualquer campo do grupo
+- **Excluir grupo**: remove grupo e todos os seus itens
+- **Novo item**: define nome, preco e ordem dentro de um grupo
+- **Editar item**: atualiza nome, preco e ordem
+- **Ativar/Desativar item**: alterna `isAvailable` sem excluir o item
+- **Excluir item**: remove o item permanentemente
+
+Erros retornados pelo backend (validacoes de grupo, conflitos) sao exibidos inline acima da lista de grupos.
+
 ## Painel administrativo — abas
 
 | Aba | Descricao |
 |---|---|
 | Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp, horario, taxa de entrega e links de redes sociais (Instagram, Facebook, TikTok, X/Twitter) |
-| Produtos | CRUD de produtos com upload de imagem; categoria selecionada via lista dinamica; suporte a promocao com campos sincronizados de desconto percentual e preco promocional |
+| Produtos | CRUD de produtos com upload de imagem; categoria selecionada via lista dinamica; suporte a promocao com campos sincronizados; secao de grupos de adicionais ao editar um produto existente |
 | Categorias | CRUD de categorias; slug auto-gerado e imutavel |
 | Clientes | Listagem somente leitura |
 | Pedidos | Acompanhamento com avanco de status e cancelamento; filtro por data; badge de tipo do pedido e taxa de entrega exibida nos cards |
@@ -189,6 +260,17 @@ createProduct(payload): Observable<ProductDto>
 updateProduct(id, payload): Observable<ProductDto>
 deleteProduct(id): Observable<void>
 
+// Grupos de adicionais
+getAdditionalGroups(productId): Observable<AdditionalGroupDto[]>
+createAdditionalGroup(productId, payload): Observable<AdditionalGroupDto>
+updateAdditionalGroup(productId, groupId, payload): Observable<AdditionalGroupDto>
+deleteAdditionalGroup(productId, groupId): Observable<void>
+
+// Itens de adicionais
+createAdditionalItem(productId, groupId, payload): Observable<AdditionalItemDto>
+updateAdditionalItem(productId, groupId, itemId, payload): Observable<AdditionalItemDto>
+deleteAdditionalItem(productId, groupId, itemId): Observable<void>
+
 // Clientes
 getClients(page, pageSize, search?): Observable<PaginatedResult<ClientDto>>
 createClient(payload): Observable<ClientDto>
@@ -214,11 +296,21 @@ saveIFoodIntegration(payload): Observable<IFoodIntegrationDto>
 Todos os DTOs ficam em `src/app/core/api.models.ts`. Interfaces principais:
 
 ```typescript
-interface CategoryDto {
-  id: number;
-  slug: string;
+interface AdditionalItemDto {
+  id: string;
   name: string;
+  price: number;
+  isAvailable: boolean;
   sortOrder: number;
+}
+
+interface AdditionalGroupDto {
+  id: string;
+  name: string;
+  minSelections: number;
+  maxSelections: number;
+  sortOrder: number;
+  items: AdditionalItemDto[];
 }
 
 interface ProductDto {
@@ -226,7 +318,7 @@ interface ProductDto {
   name: string;
   description: string;
   price: number;
-  category: string;  // slug da categoria
+  category: string;          // slug da categoria
   imageUrl: string;
   trackInventory: boolean;
   stockQuantity: number;
@@ -235,22 +327,24 @@ interface ProductDto {
   stockStatus: string;
   isOnPromotion: boolean;
   promotionalPrice: number | null;
+  additionalGroups: AdditionalGroupDto[];
 }
 
-interface EstablishmentDto {
+interface OrderItemAdditionalDto {
+  groupName: string;
   name: string;
-  logoUrl: string;
-  category: string;
-  address: string;
-  whatsapp: string;
-  openTime: string;
-  closeTime: string;
-  deliveryFee: number;          // taxa de entrega em reais; 0 = sem taxa
-  sendOrderTrackingViaWhatsApp: boolean;
-  instagramUrl?: string | null; // exibido como icone no hero do cardapio publico
-  facebookUrl?: string | null;
-  tikTokUrl?: string | null;
-  twitterUrl?: string | null;
+  price: number;
+  quantity: number;
+}
+
+interface OrderItemDto {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  additionalsPrice: number;  // soma dos adicionais por unidade
+  subtotal: number;          // quantity * (unitPrice + additionalsPrice)
+  additionals: OrderItemAdditionalDto[];
 }
 
 interface OrderDto {
@@ -268,6 +362,91 @@ interface OrderDto {
   orderType: string | null;  // 'Entrega' | 'Retirada' | 'ConsumoLocal' | null
   note: string | null;
   items: OrderItemDto[];
+}
+
+interface EstablishmentDto {
+  name: string;
+  logoUrl: string;
+  category: string;
+  address: string;
+  whatsapp: string;
+  openTime: string;
+  closeTime: string;
+  deliveryFee: number;
+  sendOrderTrackingViaWhatsApp: boolean;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  tikTokUrl?: string | null;
+  twitterUrl?: string | null;
+}
+```
+
+## CartService
+
+`CartService` gerencia o estado do carrinho com Angular Signals.
+
+### Interface CartItem
+
+```typescript
+interface CartItemAdditional {
+  additionalItemId: string;
+  groupName: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+interface CartItem {
+  cartKey: string;       // chave unica: productId ou productId|itemId:qty,...
+  productId: string;
+  name: string;
+  price: number;         // preco efetivo (promocional ou normal)
+  originalPrice: number; // preco original, para exibicao do riscado
+  isOnPromotion: boolean;
+  additionalsPrice: number; // soma dos adicionais por unidade
+  additionals: CartItemAdditional[];
+  quantity: number;
+  trackInventory: boolean;
+  stockQuantity: number;
+}
+```
+
+### Signals expostos
+
+```typescript
+items: Signal<CartItem[]>
+deliveryFee: WritableSignal<number>   // setado ao carregar o estabelecimento
+total: Signal<number>                 // soma de (price + additionalsPrice) * quantity
+grandTotal: Signal<number>            // total + deliveryFee (0 quando carrinho vazio)
+count: Signal<number>
+```
+
+### Metodos principais
+
+```typescript
+add(item: ProductDto, additionals?: CartItemAdditional[]): boolean
+incrementByKey(cartKey: string, stockLimit: number, trackInventory: boolean): boolean
+remove(cartKey: string): void    // decrementa 1 ou remove se quantity === 1
+delete(cartKey: string): void    // remove independentemente da quantidade
+clear(): void
+```
+
+`grandTotal` so adiciona a taxa de entrega quando ha ao menos um item no carrinho, evitando exibir o valor da taxa no Total quando o carrinho esta vazio.
+
+## Payload de criacao de pedido com adicionais
+
+O checkout envia `additionals` por item quando o cliente selecionou adicionais:
+
+```typescript
+interface CreateOrderItemAdditionalPayload {
+  additionalItemId: string;
+  quantity: number;
+}
+
+interface CreateOrderItemPayload {
+  productId: string;
+  quantity: number;
+  additionals?: CreateOrderItemAdditionalPayload[];
 }
 ```
 
@@ -317,6 +496,8 @@ Produtos em promocao exibem:
 - preco promocional em destaque (vermelho)
 - preco original riscado abaixo
 
+No modal de personalizacao, o preco base exibido ja e o promocional, com o preco original riscado ao lado.
+
 No carrinho, itens em promocao exibem:
 
 - tag **Promo** ao lado do nome
@@ -325,33 +506,6 @@ No carrinho, itens em promocao exibem:
 ### Impacto no pedido
 
 O `CartService.add()` usa o `promotionalPrice` como preco efetivo quando `isOnPromotion = true`. Esse preco e o valor enviado no payload de criacao do pedido e gravado como `UnitPrice` no `OrderItem`. O preco original fica disponivel apenas no frontend para exibicao.
-
-### CartService — signals expostos
-
-```typescript
-items: Signal<CartItem[]>
-deliveryFee: WritableSignal<number>   // setado ao carregar o estabelecimento
-total: Signal<number>                 // soma dos itens (sem taxa)
-grandTotal: Signal<number>            // total + deliveryFee (0 quando carrinho vazio)
-count: Signal<number>
-```
-
-`CartItem` inclui os campos:
-
-```typescript
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;         // preco efetivo (promocional ou normal)
-  originalPrice: number; // preco original, para exibicao do riscado
-  isOnPromotion: boolean;
-  quantity: number;
-  trackInventory: boolean;
-  stockQuantity: number;
-}
-```
-
-`grandTotal` so adiciona a taxa de entrega quando ha ao menos um item no carrinho, evitando exibir o valor da taxa no Total quando o carrinho esta vazio.
 
 ## Localizacao
 
@@ -364,7 +518,8 @@ interface CartItem {
 ## Pontos de atencao
 
 - a URL do backend esta hardcoded em `environment.ts`; em producao, atualizar `environment.prod.ts`
-- o `isProtectedApiRequest` em `api.config.ts` e a fonte de verdade sobre quais rotas levam token; qualquer novo endpoint protegido precisa ser registrado la
+- o `isProtectedApiRequest` em `api.config.ts` e a fonte de verdade sobre quais rotas levam token; qualquer novo endpoint protegido precisa ser registrado la; endpoints de additional-groups sao cobertos pela regra existente de `/Products` (POST/PUT/DELETE protegidos, GET publico)
+- os endpoints de additional-groups no `ApiService` usam `/Products/` com P maiusculo para corresponder exatamente ao prefixo verificado em `isProtectedApiRequest`; usar minusculo faria o interceptor nao enviar o token e retornar 401
 - o admin carrega todas as entidades no construtor (products 1000, clients 1000, orders 1000) para paginacao local; em bases grandes, considerar paginacao server-side
 
 ## Sugestoes de proximos passos

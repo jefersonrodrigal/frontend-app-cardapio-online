@@ -3,9 +3,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
-import { CartService } from '../../core/cart.service';
+import { CartItemAdditional, CartService } from '../../core/cart.service';
 import { ClientAuthService } from '../../core/client-auth.service';
-import { CategoryDto, ClientDto, CreateOrderPayload, EstablishmentDto, ProductDto } from '../../core/api.models';
+import { AdditionalGroupDto, CategoryDto, ClientDto, CreateOrderPayload, EstablishmentDto, ProductDto } from '../../core/api.models';
 
 interface DeliveryAddressParts {
   zipCode: string;
@@ -55,6 +55,26 @@ export class Home {
   protected readonly loadError = signal('');
   private lastDeliveryZipLookup = '';
   private deliveryAddressParts: DeliveryAddressParts | null = null;
+
+  protected readonly productModal = signal<ProductDto | null>(null);
+  protected readonly modalSelections = signal<Partial<Record<string, number>>>({});
+
+  protected readonly baseModalPrice = computed(() => {
+    const p = this.productModal();
+    if (!p) return 0;
+    return p.isOnPromotion && p.promotionalPrice ? p.promotionalPrice : p.price;
+  });
+
+  protected readonly modalAdditionalsTotal = computed(() => {
+    const product = this.productModal();
+    if (!product) return 0;
+    const sel = this.modalSelections();
+    return product.additionalGroups.flatMap(g => g.items).reduce((sum, item) => {
+      return sum + item.price * (sel[item.id] ?? 0);
+    }, 0);
+  });
+
+  protected readonly modalTotal = computed(() => this.baseModalPrice() + this.modalAdditionalsTotal());
 
   protected readonly categoryPages = signal<Record<string, number>>({});
   protected readonly categorySections = computed(() => {
@@ -107,6 +127,16 @@ export class Home {
   }
 
   protected addToCart(item: ProductDto): void {
+    if (!this.canAddProduct(item)) {
+      this.showToast(this.stockLimitMessage(item), true);
+      return;
+    }
+
+    if (item.additionalGroups?.length > 0) {
+      this.openProductModal(item);
+      return;
+    }
+
     if (!this.cartService.add(item)) {
       this.showToast(this.stockLimitMessage(item), true);
       return;
@@ -115,21 +145,87 @@ export class Home {
     this.showToast('Item adicionado ao carrinho.');
   }
 
-  protected removeFromCart(productId: string): void {
-    this.cartService.remove(productId);
+  protected removeFromCart(cartKey: string): void {
+    this.cartService.remove(cartKey);
   }
 
-  protected incrementInCart(productId: string): void {
-    const product = this.products().find((p) => p.id === productId);
-    if (product) {
-      if (!this.cartService.add(product)) {
-        this.showToast(this.stockLimitMessage(product), true);
-      }
+  protected incrementInCart(cartKey: string): void {
+    const item = this.cartService.items().find(i => i.cartKey === cartKey);
+    if (!item) return;
+    if (!this.cartService.incrementByKey(cartKey, item.stockQuantity, item.trackInventory)) {
+      this.showToast(`Estoque maximo atingido para ${item.name}.`, true);
     }
   }
 
-  protected deleteFromCart(productId: string): void {
-    this.cartService.delete(productId);
+  protected deleteFromCart(cartKey: string): void {
+    this.cartService.delete(cartKey);
+  }
+
+  protected openProductModal(item: ProductDto): void {
+    this.productModal.set(item);
+    this.modalSelections.set({});
+  }
+
+  protected closeProductModal(): void {
+    this.productModal.set(null);
+    this.modalSelections.set({});
+  }
+
+  protected modalGroupSelectionCount(group: AdditionalGroupDto): number {
+    const sel = this.modalSelections();
+    return group.items.reduce((sum, item) => sum + (sel[item.id] ?? 0), 0);
+  }
+
+  protected selectRadioItem(itemId: string, group: AdditionalGroupDto): void {
+    const cleared = group.items.reduce((acc, i) => ({ ...acc, [i.id]: 0 }), {} as Record<string, number>);
+    this.modalSelections.update(sel => ({ ...sel, ...cleared, [itemId]: 1 }));
+  }
+
+  protected setModalSelection(itemId: string, group: AdditionalGroupDto, delta: number): void {
+    this.modalSelections.update(sel => {
+      const current = sel[itemId] ?? 0;
+      const groupCount = this.modalGroupSelectionCount(group);
+      if (delta > 0 && groupCount >= group.maxSelections) return sel;
+      const next = Math.max(0, current + delta);
+      return { ...sel, [itemId]: next };
+    });
+  }
+
+  protected isModalGroupValid(group: AdditionalGroupDto): boolean {
+    return this.modalGroupSelectionCount(group) >= group.minSelections;
+  }
+
+  protected canConfirmModal(): boolean {
+    const product = this.productModal();
+    if (!product) return false;
+    return product.additionalGroups.every(g => this.isModalGroupValid(g));
+  }
+
+  protected confirmProductModal(): void {
+    const product = this.productModal();
+    if (!product || !this.canConfirmModal()) return;
+
+    const sel = this.modalSelections();
+    const additionals: CartItemAdditional[] = product.additionalGroups.flatMap(group =>
+      group.items
+        .filter(item => (sel[item.id] ?? 0) > 0)
+        .map(item => ({
+          additionalItemId: item.id,
+          groupName: group.name,
+          name: item.name,
+          price: item.price,
+          quantity: sel[item.id] ?? 1,
+        }))
+    );
+
+    if (!this.cartService.add(product, additionals)) {
+      this.showToast(this.stockLimitMessage(product), true);
+      this.closeProductModal();
+      return;
+    }
+
+    this.showToast('Item adicionado ao carrinho.');
+    this.closeProductModal();
   }
 
   protected getCategoryPage(slug: string): number {
@@ -184,6 +280,10 @@ export class Home {
 
   protected isCartItemAtStockLimit(item: { trackInventory: boolean; stockQuantity: number; quantity: number }): boolean {
     return item.trackInventory && item.quantity >= item.stockQuantity;
+  }
+
+  protected cartItemSubtotal(item: { price: number; additionalsPrice: number; quantity: number }): number {
+    return (item.price + item.additionalsPrice) * item.quantity;
   }
 
   protected openCart(): void {
@@ -317,7 +417,7 @@ export class Home {
       return;
     }
 
-    const unavailableItem = this.cart().find((item) => item.trackInventory && item.quantity > item.stockQuantity);
+    const unavailableItem = this.cart().find((ci) => ci.trackInventory && ci.quantity > ci.stockQuantity);
     if (unavailableItem) {
       this.showToast(`Quantidade indisponivel para ${unavailableItem.name}.`, true);
       this.loadData();
@@ -347,8 +447,12 @@ export class Home {
       source: 'site',
       orderType: 'Entrega',
       items: this.cart().map((item) => ({
-        productId: item.id,
+        productId: item.productId,
         quantity: item.quantity,
+        additionals: item.additionals.map(a => ({
+          additionalItemId: a.additionalItemId,
+          quantity: a.quantity,
+        })),
       })),
       trackingBaseUrl: globalThis.location?.origin ?? null,
     };

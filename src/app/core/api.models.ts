@@ -38,6 +38,7 @@ export interface ProductDto {
   stockStatus: string;
   isOnPromotion: boolean;
   promotionalPrice: number | null;
+  additionalGroups: AdditionalGroupDto[];
 }
 
 export interface ClientDto {
@@ -93,12 +94,52 @@ export interface ClientLoginPayload {
   password: string;
 }
 
+export interface AdditionalItemDto {
+  id: string;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+  sortOrder: number;
+}
+
+export interface AdditionalGroupDto {
+  id: string;
+  name: string;
+  minSelections: number;
+  maxSelections: number;
+  sortOrder: number;
+  items: AdditionalItemDto[];
+}
+
+export interface AdditionalGroupPayload {
+  name: string;
+  minSelections: number;
+  maxSelections: number;
+  sortOrder: number;
+}
+
+export interface AdditionalItemPayload {
+  name: string;
+  price: number;
+  isAvailable: boolean;
+  sortOrder: number;
+}
+
+export interface OrderItemAdditionalDto {
+  groupName: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 export interface OrderItemDto {
   productId: string | null;
   productName: string;
   quantity: number;
   unitPrice: number;
+  additionalsPrice: number;
   subtotal: number;
+  additionals: OrderItemAdditionalDto[];
 }
 
 export interface OrderDto {
@@ -161,9 +202,15 @@ export interface UploadResponse {
   url: string;
 }
 
+export interface CreateOrderItemAdditionalPayload {
+  additionalItemId: string;
+  quantity: number;
+}
+
 export interface CreateOrderItemPayload {
   productId: string;
   quantity: number;
+  additionals?: CreateOrderItemAdditionalPayload[];
 }
 
 export interface CreateOrderPayload {

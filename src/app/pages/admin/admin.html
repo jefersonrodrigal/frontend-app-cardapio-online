@@ -393,6 +393,155 @@
                 </button>
               </div>
             </form>
+
+            @if (editingProductId()) {
+              <div class="additional-groups-section">
+                <div class="additional-groups-section__header">
+                  <div>
+                    <h4>Grupos de Adicionais</h4>
+                    <p>Configure os adicionais que o cliente pode escolher ao pedir este produto.</p>
+                  </div>
+                  @if (!showGroupForm()) {
+                    <button type="button" class="secondary-button" (click)="openAddGroup()">
+                      <i class="fa fa-plus" aria-hidden="true"></i>
+                      Novo grupo
+                    </button>
+                  }
+                </div>
+
+                @if (groupFormError()) {
+                  <div class="alert alert--error">
+                    <i class="fa fa-circle-exclamation" aria-hidden="true"></i>
+                    {{ groupFormError() }}
+                  </div>
+                }
+
+                @if (showGroupForm()) {
+                  <div class="group-form-card">
+                    <h5>{{ editingGroupId() ? 'Editar grupo' : 'Novo grupo' }}</h5>
+                    <div class="form-grid">
+                      <div class="field">
+                        <label>Nome do grupo</label>
+                        <input type="text" [(ngModel)]="groupForm.name" placeholder="Ex: Proteinas Extras" name="groupName" />
+                      </div>
+                      <div class="field">
+                        <label>Min. selecoes</label>
+                        <input type="number" [(ngModel)]="groupForm.minSelections" min="0" name="groupMin" />
+                      </div>
+                      <div class="field">
+                        <label>Max. selecoes</label>
+                        <input type="number" [(ngModel)]="groupForm.maxSelections" min="1" name="groupMax" />
+                      </div>
+                      <div class="field">
+                        <label>Ordem</label>
+                        <input type="number" [(ngModel)]="groupForm.sortOrder" min="0" name="groupOrder" />
+                      </div>
+                    </div>
+                    <div class="form-actions">
+                      <button type="button" class="secondary-button" (click)="cancelGroupForm()">Cancelar</button>
+                      <button type="button" class="primary-button" (click)="saveGroup()">
+                        <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                        Salvar grupo
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                @if (isLoadingAdditionalGroups()) {
+                  <p class="empty-state">Carregando grupos...</p>
+                } @else if (additionalGroups().length === 0 && !showGroupForm()) {
+                  <p class="empty-state">Nenhum grupo configurado. Clique em "Novo grupo" para comecar.</p>
+                } @else {
+                  @for (group of additionalGroups(); track group.id) {
+                    <div class="group-card">
+                      <div class="group-card__header">
+                        <div class="group-card__title">
+                          <strong>{{ group.name }}</strong>
+                          <span class="group-card__rule">
+                            @if (group.minSelections > 0) { Obrigatorio &bull; }
+                            Min {{ group.minSelections }} / Max {{ group.maxSelections }}
+                          </span>
+                        </div>
+                        <div class="group-card__actions">
+                          @if (showItemForm() !== group.id) {
+                            <button type="button" class="secondary-button secondary-button--sm" (click)="openAddItem(group.id)">
+                              <i class="fa fa-plus" aria-hidden="true"></i> Item
+                            </button>
+                          }
+                          <button type="button" class="secondary-button secondary-button--sm" (click)="editGroup(group)">
+                            <i class="fa fa-pen" aria-hidden="true"></i>
+                          </button>
+                          <button type="button" class="secondary-button secondary-button--sm secondary-button--danger" (click)="deleteGroup(group.id)">
+                            <i class="fa fa-trash" aria-hidden="true"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      @if (showItemForm() === group.id) {
+                        <div class="item-form-card">
+                          <h6>{{ editingItemId() ? 'Editar item' : 'Novo item' }}</h6>
+                          <div class="form-grid">
+                            <div class="field">
+                              <label>Nome</label>
+                              <input type="text" [(ngModel)]="itemForm.name" placeholder="Ex: Segunda Carne" name="itemName" />
+                            </div>
+                            <div class="field">
+                              <label>Preco adicional (R$)</label>
+                              <input type="number" [(ngModel)]="itemForm.price" min="0" step="0.01" name="itemPrice" placeholder="0,00" />
+                            </div>
+                            <div class="field">
+                              <label>Ordem</label>
+                              <input type="number" [(ngModel)]="itemForm.sortOrder" min="0" name="itemOrder" />
+                            </div>
+                          </div>
+                          <div class="form-actions">
+                            <button type="button" class="secondary-button" (click)="cancelItemForm()">Cancelar</button>
+                            <button type="button" class="primary-button" (click)="saveItem()">
+                              <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                              Salvar item
+                            </button>
+                          </div>
+                        </div>
+                      }
+
+                      <div class="group-items">
+                        @if (group.items.length === 0) {
+                          <p class="group-items__empty">Nenhum item. Clique em "+ Item".</p>
+                        }
+                        @for (item of group.items; track item.id) {
+                          <div class="group-item" [class.group-item--unavailable]="!item.isAvailable">
+                            <div class="group-item__info">
+                              <span>{{ item.name }}</span>
+                              <span class="group-item__price">
+                                @if (item.price > 0) {
+                                  + {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                                } @else {
+                                  Gratis
+                                }
+                              </span>
+                            </div>
+                            <div class="group-item__actions">
+                              <button type="button" class="secondary-button secondary-button--sm"
+                                (click)="toggleItemAvailability(group.id, item)"
+                                [title]="item.isAvailable ? 'Desativar' : 'Ativar'"
+                              >
+                                <i class="fa" [class.fa-eye]="item.isAvailable" [class.fa-eye-slash]="!item.isAvailable" aria-hidden="true"></i>
+                              </button>
+                              <button type="button" class="secondary-button secondary-button--sm" (click)="editItem(group.id, item)">
+                                <i class="fa fa-pen" aria-hidden="true"></i>
+                              </button>
+                              <button type="button" class="secondary-button secondary-button--sm secondary-button--danger" (click)="deleteItem(group.id, item.id)">
+                                <i class="fa fa-trash" aria-hidden="true"></i>
+                              </button>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+            }
           </div>
         }
 

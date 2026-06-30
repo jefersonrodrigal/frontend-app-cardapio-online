@@ -6,6 +6,10 @@ import { Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import {
+  AdditionalGroupDto,
+  AdditionalGroupPayload,
+  AdditionalItemDto,
+  AdditionalItemPayload,
   AiAgentsIntegrationDto,
   AnotaiIntegrationDto,
   CategoryDto,
@@ -111,6 +115,17 @@ export class Admin {
   protected readonly clients = signal<Client[]>([]);
   protected readonly orders = signal<OrderDto[]>([]);
   protected readonly internalOrderItems = signal<InternalOrderItem[]>([]);
+
+  protected readonly additionalGroups = signal<AdditionalGroupDto[]>([]);
+  protected readonly isLoadingAdditionalGroups = signal(false);
+  protected readonly showGroupForm = signal(false);
+  protected readonly editingGroupId = signal<string | null>(null);
+  protected readonly showItemForm = signal<string | null>(null); // groupId
+  protected readonly editingItemId = signal<string | null>(null);
+  protected readonly groupFormError = signal('');
+
+  protected groupForm: AdditionalGroupPayload = { name: '', minSelections: 0, maxSelections: 1, sortOrder: 0 };
+  protected itemForm: AdditionalItemPayload = { name: '', price: 0, isAvailable: true, sortOrder: 0 };
 
   protected readonly totalProductPages = computed(() =>
     Math.max(1, Math.ceil(this.products().length / PRODUCTS_PER_PAGE)),
@@ -700,6 +715,7 @@ export class Admin {
       })(),
     };
     this.showProductForm.set(true);
+    this.loadAdditionalGroups();
   }
 
   protected saveProduct(): void {
@@ -780,6 +796,141 @@ export class Admin {
     this.showProductForm.set(false);
     this.editingProductId.set(null);
     this.editingProductName.set(null);
+    this.additionalGroups.set([]);
+    this.showGroupForm.set(false);
+    this.showItemForm.set(null);
+    this.editingGroupId.set(null);
+    this.editingItemId.set(null);
+    this.groupFormError.set('');
+  }
+
+  protected loadAdditionalGroups(): void {
+    const productId = this.editingProductId();
+    if (!productId) return;
+    this.isLoadingAdditionalGroups.set(true);
+    this.api.getAdditionalGroups(productId).subscribe({
+      next: (groups) => {
+        this.additionalGroups.set(groups);
+        this.isLoadingAdditionalGroups.set(false);
+      },
+      error: () => { this.isLoadingAdditionalGroups.set(false); },
+    });
+  }
+
+  protected openAddGroup(): void {
+    this.editingGroupId.set(null);
+    this.groupForm = { name: '', minSelections: 0, maxSelections: 1, sortOrder: this.additionalGroups().length };
+    this.showGroupForm.set(true);
+    this.groupFormError.set('');
+  }
+
+  protected editGroup(group: AdditionalGroupDto): void {
+    this.editingGroupId.set(group.id);
+    this.groupForm = { name: group.name, minSelections: group.minSelections, maxSelections: group.maxSelections, sortOrder: group.sortOrder };
+    this.showGroupForm.set(true);
+    this.groupFormError.set('');
+  }
+
+  protected cancelGroupForm(): void {
+    this.showGroupForm.set(false);
+    this.editingGroupId.set(null);
+    this.groupFormError.set('');
+  }
+
+  protected saveGroup(): void {
+    const productId = this.editingProductId();
+    if (!productId || !this.groupForm.name.trim()) return;
+
+    const editingId = this.editingGroupId();
+    const request = editingId
+      ? this.api.updateAdditionalGroup(productId, editingId, this.groupForm)
+      : this.api.createAdditionalGroup(productId, this.groupForm);
+
+    request.subscribe({
+      next: () => {
+        this.cancelGroupForm();
+        this.loadAdditionalGroups();
+        this.groupFormError.set('');
+      },
+      error: (error: HttpErrorResponse) => {
+        this.groupFormError.set(this.getApiErrorMessage(error, 'Nao foi possivel salvar o grupo.'));
+      },
+    });
+  }
+
+  protected deleteGroup(groupId: string): void {
+    const productId = this.editingProductId();
+    if (!productId) return;
+    this.api.deleteAdditionalGroup(productId, groupId).subscribe({
+      next: () => { this.loadAdditionalGroups(); },
+      error: (error: HttpErrorResponse) => {
+        this.groupFormError.set(this.getApiErrorMessage(error, 'Nao foi possivel excluir o grupo.'));
+      },
+    });
+  }
+
+  protected openAddItem(groupId: string): void {
+    const group = this.additionalGroups().find(g => g.id === groupId);
+    this.editingItemId.set(null);
+    this.itemForm = { name: '', price: 0, isAvailable: true, sortOrder: group?.items.length ?? 0 };
+    this.showItemForm.set(groupId);
+    this.groupFormError.set('');
+  }
+
+  protected editItem(groupId: string, item: AdditionalItemDto): void {
+    this.editingItemId.set(item.id);
+    this.itemForm = { name: item.name, price: item.price, isAvailable: item.isAvailable, sortOrder: item.sortOrder };
+    this.showItemForm.set(groupId);
+    this.groupFormError.set('');
+  }
+
+  protected cancelItemForm(): void {
+    this.showItemForm.set(null);
+    this.editingItemId.set(null);
+    this.groupFormError.set('');
+  }
+
+  protected saveItem(): void {
+    const productId = this.editingProductId();
+    const groupId = this.showItemForm();
+    if (!productId || !groupId || !this.itemForm.name.trim()) return;
+
+    const editingId = this.editingItemId();
+    const request = editingId
+      ? this.api.updateAdditionalItem(productId, groupId, editingId, this.itemForm)
+      : this.api.createAdditionalItem(productId, groupId, this.itemForm);
+
+    request.subscribe({
+      next: () => {
+        this.cancelItemForm();
+        this.loadAdditionalGroups();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.groupFormError.set(this.getApiErrorMessage(error, 'Nao foi possivel salvar o item.'));
+      },
+    });
+  }
+
+  protected deleteItem(groupId: string, itemId: string): void {
+    const productId = this.editingProductId();
+    if (!productId) return;
+    this.api.deleteAdditionalItem(productId, groupId, itemId).subscribe({
+      next: () => { this.loadAdditionalGroups(); },
+      error: (error: HttpErrorResponse) => {
+        this.groupFormError.set(this.getApiErrorMessage(error, 'Nao foi possivel excluir o item.'));
+      },
+    });
+  }
+
+  protected toggleItemAvailability(groupId: string, item: AdditionalItemDto): void {
+    const productId = this.editingProductId();
+    if (!productId) return;
+    this.api.updateAdditionalItem(productId, groupId, item.id, { ...item, isAvailable: !item.isAvailable }).subscribe({
+      next: () => { this.loadAdditionalGroups(); },
+      error: (error: HttpErrorResponse) => {
+        this.groupFormError.set(this.getApiErrorMessage(error, 'Nao foi possivel atualizar a disponibilidade.'));
+      },
+    });
   }
 
   protected openInventoryMovement(product: InventoryProductDto, type: InventoryMovementType = 'entrada'): void {
