@@ -31,22 +31,42 @@ const STATUS_LABELS: Record<string, string> = {
   Pendente: 'Recebido',
   EmPreparo: 'Em preparo',
   EmEntrega: 'Saiu para entrega',
+  EmAtraso: 'Em atraso',
   Entregue: 'Entregue',
   Cancelado: 'Cancelado',
+};
+
+const DELAYED_ORDER_STATUS_STEP: OrderStatusStep = {
+  status: 'EmAtraso',
+  label: 'Em atraso',
+  description: 'Pedido passou do prazo previsto.',
 };
 
 export function orderStatusLabel(status: string): string {
   return STATUS_LABELS[status] ?? status;
 }
 
-export function orderStatusIndex(status: string): number {
+export function orderStatusSteps(status: string): OrderStatusStep[] {
+  if (status !== 'EmAtraso') {
+    return ORDER_STATUS_STEPS;
+  }
+
+  const deliveredStep = ORDER_STATUS_STEPS[ORDER_STATUS_STEPS.length - 1];
+  return [
+    ...ORDER_STATUS_STEPS.slice(0, -1),
+    DELAYED_ORDER_STATUS_STEP,
+    deliveredStep,
+  ];
+}
+
+export function orderStatusIndex(status: string, steps = orderStatusSteps(status)): number {
   if (status === 'Cancelado') {
     return 0;
   }
 
   return Math.max(
     0,
-    ORDER_STATUS_STEPS.findIndex((step) => step.status === status),
+    steps.findIndex((step) => step.status === status),
   );
 }
 

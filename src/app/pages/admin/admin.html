@@ -86,133 +86,189 @@
           <p class="empty-state">Carregando dados do estabelecimento...</p>
         } @else {
           <form class="admin-form" (submit)="saveEstablishment(); $event.preventDefault()">
-            <div class="form-grid">
-              <div class="field">
-                <label for="est-name">Nome do estabelecimento</label>
-                <input id="est-name" type="text" name="estName" [(ngModel)]="estForm.name"
-                  placeholder="Nome do seu estabelecimento" />
+            <div class="settings-group">
+              <div class="settings-group__header">
+                <span class="settings-group__eyebrow">Identidade</span>
+                <h3>Informacoes principais</h3>
+                <p>Dados exibidos no cardapio publico.</p>
               </div>
-              <div class="field">
-                <label for="est-category">Categoria</label>
-                <select id="est-category" name="estCategory" [(ngModel)]="estForm.category">
-                  <option value="hamburgueria">Hamburgueria</option>
-                  <option value="pizzaria">Pizzaria</option>
-                  <option value="lanchonete">Lanchonete</option>
-                  <option value="restaurante">Restaurante</option>
-                  <option value="cafeteria">Cafeteria</option>
-                  <option value="doceria">Doceria</option>
-                  <option value="outro">Outro</option>
-                </select>
-              </div>
-              <div class="field field--wide">
-                <label for="est-logo-url">Logo da empresa</label>
-                <input id="est-logo-url" type="text" name="estLogoUrl" [(ngModel)]="estForm.logoUrl"
-                  placeholder="https://... ou upload abaixo" />
-                <div class="image-upload">
-                  <input
-                    id="est-logo-upload"
-                    type="file"
-                    accept="image/*"
-                    class="image-upload__input"
-                    (change)="onEstablishmentLogoSelected($event)"
-                    #establishmentLogoUpload
-                  />
-                  <button
-                    type="button"
-                    class="secondary-button image-upload__button"
-                    (click)="establishmentLogoUpload.click()"
-                  >
-                    <i class="fa fa-image" aria-hidden="true"></i>
-                    Enviar logo
-                  </button>
-                  @if (estForm.logoUrl) {
-                    <img
-                      class="image-upload__preview image-upload__preview--logo"
-                      [src]="estForm.logoUrl"
-                      [alt]="estForm.name || 'Preview da logo da empresa'"
-                      width="128"
-                      height="128"
-                      loading="lazy"
-                      decoding="async"
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="est-name">Nome do estabelecimento</label>
+                  <input id="est-name" type="text" name="estName" [(ngModel)]="estForm.name"
+                    placeholder="Nome do seu estabelecimento" />
+                </div>
+                <div class="field">
+                  <label for="est-category">Categoria</label>
+                  <select id="est-category" name="estCategory" [(ngModel)]="estForm.category">
+                    <option value="hamburgueria">Hamburgueria</option>
+                    <option value="pizzaria">Pizzaria</option>
+                    <option value="lanchonete">Lanchonete</option>
+                    <option value="restaurante">Restaurante</option>
+                    <option value="cafeteria">Cafeteria</option>
+                    <option value="doceria">Doceria</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div class="field field--wide">
+                  <label for="est-logo-url">Logo da empresa</label>
+                  <input id="est-logo-url" type="text" name="estLogoUrl" [(ngModel)]="estForm.logoUrl"
+                    placeholder="https://... ou upload abaixo" />
+                  <div class="image-upload">
+                    <input
+                      id="est-logo-upload"
+                      type="file"
+                      accept="image/*"
+                      class="image-upload__input"
+                      (change)="onEstablishmentLogoSelected($event)"
+                      #establishmentLogoUpload
                     />
-                  }
+                    <button
+                      type="button"
+                      class="secondary-button image-upload__button"
+                      (click)="establishmentLogoUpload.click()"
+                    >
+                      <i class="fa fa-image" aria-hidden="true"></i>
+                      Enviar logo
+                    </button>
+                    @if (estForm.logoUrl) {
+                      <img
+                        class="image-upload__preview image-upload__preview--logo"
+                        [src]="estForm.logoUrl"
+                        [alt]="estForm.name || 'Preview da logo da empresa'"
+                        width="128"
+                        height="128"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    }
+                  </div>
                 </div>
               </div>
-              <div class="field field--wide">
-                <label for="est-address">Endereco</label>
-                <input id="est-address" type="text" name="estAddress" [(ngModel)]="estForm.address"
-                  placeholder="Rua, numero, bairro, cidade" />
+            </div>
+
+            <div class="settings-group">
+              <div class="settings-group__header">
+                <span class="settings-group__eyebrow">Atendimento</span>
+                <h3>Endereco e horarios</h3>
+                <p>Informacoes usadas para contato, retirada e calculos de entrega.</p>
               </div>
-              <div class="field">
-                <label for="est-whatsapp">WhatsApp para pedidos</label>
-                <input id="est-whatsapp" type="tel" name="estWhatsapp" [(ngModel)]="estForm.whatsapp"
-                  placeholder="5511999999999" />
+
+              <div class="form-grid">
+                <div class="field field--wide">
+                  <label for="est-address">Endereco</label>
+                  <input id="est-address" type="text" name="estAddress" [(ngModel)]="estForm.address"
+                    placeholder="Rua, numero, bairro, cidade" />
+                </div>
+                <div class="field">
+                  <label for="est-whatsapp">WhatsApp para pedidos</label>
+                  <input id="est-whatsapp" type="tel" name="estWhatsapp" [(ngModel)]="estForm.whatsapp"
+                    placeholder="5511999999999" />
+                </div>
+                <div class="field">
+                  <label for="est-open">Abertura</label>
+                  <input id="est-open" type="time" name="estOpenTime" [(ngModel)]="estForm.openTime" />
+                </div>
+                <div class="field">
+                  <label for="est-close">Fechamento</label>
+                  <input id="est-close" type="time" name="estCloseTime" [(ngModel)]="estForm.closeTime" />
+                </div>
               </div>
-              <div class="field">
-                <label for="est-open">Abertura</label>
-                <input id="est-open" type="time" name="estOpenTime" [(ngModel)]="estForm.openTime" />
+            </div>
+
+            <div class="settings-group">
+              <div class="settings-group__header">
+                <span class="settings-group__eyebrow">Entrega</span>
+                <h3>Prazos e taxa</h3>
+                <p>Parametros usados para calcular o prazo previsto de cada pedido.</p>
               </div>
-              <div class="field">
-                <label for="est-close">Fechamento</label>
-                <input id="est-close" type="time" name="estCloseTime" [(ngModel)]="estForm.closeTime" />
-              </div>
-              <div class="field">
-                <label for="est-delivery-fee">Taxa de entrega (R$)</label>
-                <input id="est-delivery-fee" type="number" name="estDeliveryFee" min="0" step="0.01"
-                  [(ngModel)]="estForm.deliveryFee" placeholder="0,00" />
-              </div>
-              <div class="field field--wide">
-                <label class="toggle-label" for="est-send-order-tracking-whatsapp">
-                  <input
-                    id="est-send-order-tracking-whatsapp"
-                    type="checkbox"
-                    class="toggle-input"
-                    name="estSendOrderTrackingViaWhatsApp"
-                    [(ngModel)]="estForm.sendOrderTrackingViaWhatsApp"
-                  />
-                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                  <span>
-                    {{ estForm.sendOrderTrackingViaWhatsApp ? 'Enviar acompanhamento por WhatsApp' : 'Nao enviar acompanhamento por WhatsApp' }}
-                  </span>
-                </label>
-              </div>
-              <div class="field field--wide">
-                <p class="form-section-label">
-                  <i class="fa fa-share-nodes" aria-hidden="true"></i>
-                  Redes sociais
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="est-delivery-fee">Taxa de entrega (R$)</label>
+                  <input id="est-delivery-fee" type="number" name="estDeliveryFee" min="0" step="0.01"
+                    [(ngModel)]="estForm.deliveryFee" placeholder="0,00" />
+                </div>
+                <div class="field">
+                  <label for="est-preparation-time">Tempo de preparo (min)</label>
+                  <input id="est-preparation-time" type="number" name="estPreparationTimeMinutes" min="5" max="240" step="1"
+                    [(ngModel)]="estForm.preparationTimeMinutes" placeholder="30" />
+                </div>
+                <div class="field">
+                  <label for="est-delivery-margin">Margem de seguranca (min)</label>
+                  <input id="est-delivery-margin" type="number" name="estDeliverySafetyMarginMinutes" min="0" max="90" step="1"
+                    [(ngModel)]="estForm.deliverySafetyMarginMinutes" placeholder="10" />
+                </div>
+                <p class="settings-note field--wide">
+                  <i class="fa fa-route" aria-hidden="true"></i>
+                  A velocidade media de deslocamento e calculada internamente pela plataforma.
                 </p>
               </div>
-              <div class="field">
-                <label for="est-instagram">
-                  <i class="fa-brands fa-instagram" aria-hidden="true"></i>
-                  Instagram
-                </label>
-                <input id="est-instagram" type="url" name="estInstagramUrl" [(ngModel)]="estForm.instagramUrl"
-                  placeholder="https://instagram.com/seuestabelecimento" />
+            </div>
+
+            <div class="settings-group">
+              <div class="settings-group__header">
+                <span class="settings-group__eyebrow">Acompanhamento</span>
+                <h3>Atualizacoes do pedido</h3>
+                <p>Controle o envio automatico do link de acompanhamento pelo WhatsApp.</p>
               </div>
-              <div class="field">
-                <label for="est-facebook">
-                  <i class="fa-brands fa-facebook" aria-hidden="true"></i>
-                  Facebook
-                </label>
-                <input id="est-facebook" type="url" name="estFacebookUrl" [(ngModel)]="estForm.facebookUrl"
-                  placeholder="https://facebook.com/seuestabelecimento" />
+
+              <label class="toggle-label" for="est-send-order-tracking-whatsapp">
+                <input
+                  id="est-send-order-tracking-whatsapp"
+                  type="checkbox"
+                  class="toggle-input"
+                  name="estSendOrderTrackingViaWhatsApp"
+                  [(ngModel)]="estForm.sendOrderTrackingViaWhatsApp"
+                />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span>
+                  {{ estForm.sendOrderTrackingViaWhatsApp ? 'Enviar acompanhamento por WhatsApp' : 'Nao enviar acompanhamento por WhatsApp' }}
+                </span>
+              </label>
+            </div>
+
+            <div class="settings-group">
+              <div class="settings-group__header">
+                <span class="settings-group__eyebrow">Redes sociais</span>
+                <h3>Canais publicos</h3>
+                <p>Links exibidos para o cliente no cardapio.</p>
               </div>
-              <div class="field">
-                <label for="est-tiktok">
-                  <i class="fa-brands fa-tiktok" aria-hidden="true"></i>
-                  TikTok
-                </label>
-                <input id="est-tiktok" type="url" name="estTikTokUrl" [(ngModel)]="estForm.tikTokUrl"
-                  placeholder="https://tiktok.com/@seuestabelecimento" />
-              </div>
-              <div class="field">
-                <label for="est-twitter">
-                  <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
-                  X (Twitter)
-                </label>
-                <input id="est-twitter" type="url" name="estTwitterUrl" [(ngModel)]="estForm.twitterUrl"
-                  placeholder="https://x.com/seuestabelecimento" />
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="est-instagram">
+                    <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+                    Instagram
+                  </label>
+                  <input id="est-instagram" type="url" name="estInstagramUrl" [(ngModel)]="estForm.instagramUrl"
+                    placeholder="https://instagram.com/seuestabelecimento" />
+                </div>
+                <div class="field">
+                  <label for="est-facebook">
+                    <i class="fa-brands fa-facebook" aria-hidden="true"></i>
+                    Facebook
+                  </label>
+                  <input id="est-facebook" type="url" name="estFacebookUrl" [(ngModel)]="estForm.facebookUrl"
+                    placeholder="https://facebook.com/seuestabelecimento" />
+                </div>
+                <div class="field">
+                  <label for="est-tiktok">
+                    <i class="fa-brands fa-tiktok" aria-hidden="true"></i>
+                    TikTok
+                  </label>
+                  <input id="est-tiktok" type="url" name="estTikTokUrl" [(ngModel)]="estForm.tikTokUrl"
+                    placeholder="https://tiktok.com/@seuestabelecimento" />
+                </div>
+                <div class="field">
+                  <label for="est-twitter">
+                    <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+                    X (Twitter)
+                  </label>
+                  <input id="est-twitter" type="url" name="estTwitterUrl" [(ngModel)]="estForm.twitterUrl"
+                    placeholder="https://x.com/seuestabelecimento" />
+                </div>
               </div>
             </div>
             <div class="form-actions">
@@ -1089,20 +1145,48 @@
           <input id="order-date-filter" type="date" class="orders-filter__input"
             [(ngModel)]="filterDateValue"
             (ngModelChange)="setFilterDate($event)" />
-          @if (filterDate()) {
-            <button type="button" class="orders-filter__clear" (click)="clearDateFilter()">
+
+          <label class="orders-filter__label" for="order-client-search">
+            <i class="fa fa-magnifying-glass" aria-hidden="true"></i>
+            Cliente:
+          </label>
+          <input
+            id="order-client-search"
+            type="search"
+            class="orders-filter__input orders-filter__input--search"
+            [(ngModel)]="orderSearchValue"
+            (ngModelChange)="setOrderSearch($event)"
+            placeholder="Buscar por nome"
+          />
+
+          <label class="orders-filter__toggle" for="orders-active-only">
+            <input
+              id="orders-active-only"
+              type="checkbox"
+              class="toggle-input"
+              [ngModel]="activeOrdersOnly()"
+              (ngModelChange)="setActiveOrdersOnly($event)"
+            />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span>Apenas em andamento</span>
+          </label>
+
+          @if (hasOrderFilters()) {
+            <button type="button" class="orders-filter__clear" (click)="clearOrderFilters()">
               <i class="fa fa-xmark" aria-hidden="true"></i>
-              Limpar
+              Limpar filtros
             </button>
-            <span class="orders-filter__result">
-              {{ filteredOrders().length }}
-              {{ filteredOrders().length === 1 ? 'pedido encontrado' : 'pedidos encontrados' }}
-            </span>
-          } @else {
-            <span class="orders-filter__result orders-filter__result--muted">
-              Exibindo todos os {{ orders().length }} pedidos
-            </span>
           }
+
+          <span class="orders-filter__result" [class.orders-filter__result--muted]="!hasOrderFilters()">
+            {{ filteredOrders().length }}
+            {{ filteredOrders().length === 1 ? 'pedido encontrado' : 'pedidos encontrados' }}
+            @if (isRefreshingOrders()) {
+              <small>Atualizando...</small>
+            } @else if (ordersLastUpdatedAt()) {
+              <small>Atualizado as {{ ordersLastUpdatedAt() }}</small>
+            }
+          </span>
         </div>
 
         <div class="orders-summary">
@@ -1143,10 +1227,12 @@
           } @else if (filteredOrders().length === 0) {
             <div class="orders-empty">
               <i class="fa fa-calendar-xmark" aria-hidden="true"></i>
-              <p>Nenhum pedido encontrado para esta data.</p>
-              <button type="button" class="secondary-button" (click)="clearDateFilter()">
-                Limpar filtro
-              </button>
+              <p>{{ hasOrderFilters() ? 'Nenhum pedido encontrado para os filtros aplicados.' : 'Nenhum pedido encontrado.' }}</p>
+              @if (hasOrderFilters()) {
+                <button type="button" class="secondary-button" (click)="clearOrderFilters()">
+                  Limpar filtros
+                </button>
+              }
             </div>
           } @else {
             @for (order of paginatedOrders(); track order.id) {
@@ -1200,6 +1286,12 @@
                       <i class="fa fa-phone" aria-hidden="true"></i>
                       {{ order.clientPhone }}
                     </span>
+                    @if (order.estimatedDeliveryDeadlineAt) {
+                      <span class="order-card__estimate">
+                        <i class="fa fa-clock" aria-hidden="true"></i>
+                        Previsao: {{ order.estimatedDeliveryDeadlineAt }}
+                      </span>
+                    }
                   </div>
                   <div class="order-card__total-area">
                     @if (order.deliveryFee > 0) {
@@ -1210,12 +1302,18 @@
                     <span class="order-card__total">
                       {{ order.total | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
                     </span>
-                    @if (canAdvance(order.status) || canCancel(order.status)) {
+                    @if (canAdvance(order.status) || canMarkDelayed(order.status) || canCancel(order.status)) {
                       <div class="order-card__actions">
                         @if (canAdvance(order.status)) {
                           <button type="button" class="primary-button" (click)="advanceOrderStatus(order.id)">
                             <i class="fa fa-chevron-right" aria-hidden="true"></i>
                             {{ nextStatusLabel(order.status) }}
+                          </button>
+                        }
+                        @if (canMarkDelayed(order.status)) {
+                          <button type="button" class="warning-button" (click)="markOrderDelayed(order.id)">
+                            <i class="fa fa-triangle-exclamation" aria-hidden="true"></i>
+                            Marcar atraso
                           </button>
                         }
                         @if (canCancel(order.status)) {

@@ -1,11 +1,12 @@
 import { CurrencyPipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { CartItemAdditional, CartService } from '../../core/cart.service';
 import { ClientAuthService } from '../../core/client-auth.service';
-import { AdditionalGroupDto, CategoryDto, ClientDto, CreateOrderPayload, EstablishmentDto, ProductDto } from '../../core/api.models';
+import { AdditionalGroupDto, CategoryDto, ClientDto, CreateOrderPayload, DeliveryEstimateDto, EstablishmentDto, ProductDto } from '../../core/api.models';
 
 interface DeliveryAddressParts {
   zipCode: string;
@@ -24,7 +25,7 @@ const MENU_ITEMS_PER_PAGE = 6;
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
-export class Home {
+export class Home implements OnDestroy {
   private readonly api = inject(ApiService);
   private readonly cartService = inject(CartService);
   private readonly clientAuth = inject(ClientAuthService);
@@ -50,11 +51,17 @@ export class Home {
   protected readonly showAddressWarning = signal(false);
   protected readonly isSubmittingOrder = signal(false);
   protected readonly isLoadingZipCode = signal(false);
+  protected readonly isLoadingDeliveryEstimate = signal(false);
+  protected readonly deliveryEstimate = signal<DeliveryEstimateDto | null>(null);
+  protected readonly deliveryEstimateError = signal('');
   protected readonly toastMessage = signal('');
   protected readonly isLoading = signal(true);
   protected readonly loadError = signal('');
   private lastDeliveryZipLookup = '';
   private deliveryAddressParts: DeliveryAddressParts | null = null;
+  private deliveryEstimateTimer: ReturnType<typeof setTimeout> | null = null;
+  private deliveryEstimateSubscription?: Subscription;
+  private deliveryEstimateRequestId = 0;
 
   protected readonly productModal = signal<ProductDto | null>(null);
   protected readonly modalSelections = signal<Partial<Record<string, number>>>({});
@@ -116,8 +123,29 @@ export class Home {
       this.syncAuthenticatedClientData();
     });
 
+    effect(() => {
+      const shouldEstimate =
+        this.isCartOpen() &&
+        this.cartStep() === 2 &&
+        this.cart().length > 0 &&
+        this.deliveryZipCode().trim().length > 0 &&
+        this.deliveryNumber().trim().length > 0 &&
+        this.address().trim().length > 0;
+
+      if (!shouldEstimate) {
+        this.clearDeliveryEstimate();
+        return;
+      }
+
+      this.scheduleDeliveryEstimate(this.address().trim());
+    });
+
     this.restoreClientSession();
     this.loadData();
+  }
+
+  ngOnDestroy(): void {
+    this.clearDeliveryEstimate();
   }
 
   protected readonly isClientAuthenticated = computed(() => this.authenticatedClient() !== null);
@@ -308,6 +336,7 @@ export class Home {
     this.deliveryNumber.set('');
     this.deliveryComplement.set('');
     this.address.set('');
+    this.clearDeliveryEstimate();
     this.showToast('Sessao do cliente encerrada.');
   }
 
@@ -484,6 +513,7 @@ export class Home {
         this.showZipCodeWarning.set(false);
         this.showNumberWarning.set(false);
         this.showAddressWarning.set(false);
+        this.clearDeliveryEstimate();
         this.closeCart();
         this.showToast(`Pedido ${order.number} enviado com sucesso.`);
         this.loadData();
@@ -580,6 +610,55 @@ export class Home {
     this.deliveryComplement.set(client.complement);
     this.address.set(client.fullAddress);
     this.deliveryAddressParts = null;
+  }
+
+  private scheduleDeliveryEstimate(address: string): void {
+    if (this.deliveryEstimateTimer) {
+      clearTimeout(this.deliveryEstimateTimer);
+    }
+
+    this.deliveryEstimateSubscription?.unsubscribe();
+    this.deliveryEstimateError.set('');
+    this.isLoadingDeliveryEstimate.set(true);
+
+    const requestId = ++this.deliveryEstimateRequestId;
+
+    this.deliveryEstimateTimer = setTimeout(() => {
+      this.deliveryEstimateSubscription = this.api.getDeliveryEstimate(address, 'Entrega').subscribe({
+        next: (estimate) => {
+          if (requestId !== this.deliveryEstimateRequestId) {
+            return;
+          }
+
+          this.deliveryEstimate.set(estimate);
+          this.deliveryEstimateError.set('');
+          this.isLoadingDeliveryEstimate.set(false);
+        },
+        error: () => {
+          if (requestId !== this.deliveryEstimateRequestId) {
+            return;
+          }
+
+          this.deliveryEstimate.set(null);
+          this.deliveryEstimateError.set('Nao foi possivel calcular a previsao agora.');
+          this.isLoadingDeliveryEstimate.set(false);
+        },
+      });
+    }, 500);
+  }
+
+  private clearDeliveryEstimate(): void {
+    if (this.deliveryEstimateTimer) {
+      clearTimeout(this.deliveryEstimateTimer);
+      this.deliveryEstimateTimer = null;
+    }
+
+    this.deliveryEstimateSubscription?.unsubscribe();
+    this.deliveryEstimateSubscription = undefined;
+    this.deliveryEstimateRequestId++;
+    this.deliveryEstimate.set(null);
+    this.deliveryEstimateError.set('');
+    this.isLoadingDeliveryEstimate.set(false);
   }
 
   private formatZipCode(value: string): string {

@@ -27,6 +27,14 @@
           <div>
             <span class="eyebrow">Pedido {{ currentOrder.number }}</span>
             <h2>{{ statusLabel(currentOrder.status) }}</h2>
+            @if (currentOrder.estimatedDeliveryDeadlineAt) {
+              <p class="status-panel__estimate">
+                Previsao: {{ currentOrder.estimatedDeliveryDeadlineAt }}
+                @if (currentOrder.estimatedDeliveryMinutes) {
+                  <span>({{ currentOrder.estimatedDeliveryMinutes }} min)</span>
+                }
+              </p>
+            }
             <p>{{ currentOrder.createdAt }} · {{ currentOrder.orderType || 'Entrega' }}</p>
           </div>
           <span [class]="statusPillClass(currentOrder.status)">
@@ -35,7 +43,7 @@
         </div>
 
         <div class="tracking-steps">
-          @for (step of steps; track step.status; let index = $index) {
+          @for (step of statusSteps(currentOrder.status); track step.status; let index = $index) {
             <div [class]="stepClass(index)">
               <span class="tracking-step__marker">{{ index + 1 }}</span>
               <div>
@@ -48,6 +56,43 @@
 
         @if (currentOrder.status === 'Cancelado') {
           <p class="status-panel__alert">Este pedido foi cancelado.</p>
+        }
+
+        @if (currentOrder.status === 'EmAtraso') {
+          <div class="status-panel__alert status-panel__alert--delayed">
+            <div>
+              <strong>Pedido em atraso</strong>
+              <p>A lanchonete marcou este pedido como atrasado. Voce pode entrar em contato pelo WhatsApp.</p>
+            </div>
+            @if (canContactEstablishmentOnWhatsApp()) {
+              <button type="button" class="whatsapp-button" (click)="contactEstablishmentOnWhatsApp()">
+                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                Contactar no WhatsApp
+              </button>
+            }
+          </div>
+        }
+
+        @if (currentOrder.canClientConfirmDelivery) {
+          <div class="status-panel__confirmation">
+            <div>
+              <strong>Pedido recebido?</strong>
+              <p>Confirme a entrega somente quando o pedido chegar ate voce.</p>
+            </div>
+            <button
+              type="button"
+              class="delivered-button"
+              [disabled]="isConfirmingDelivery()"
+              (click)="confirmDelivery()"
+            >
+              <i class="fa fa-circle-check" aria-hidden="true"></i>
+              {{ isConfirmingDelivery() ? 'Confirmando...' : 'Marcar como entregue' }}
+            </button>
+          </div>
+        }
+
+        @if (actionErrorMessage()) {
+          <p class="status-panel__action-error">{{ actionErrorMessage() }}</p>
         }
 
         <p class="status-panel__updated">
@@ -74,6 +119,13 @@
           <div class="order-summary__line">
             <span>Taxa de entrega</span>
             <strong>{{ currentOrder.deliveryFee | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
+          </div>
+        }
+
+        @if (currentOrder.estimatedDeliveryDeadlineAt) {
+          <div class="order-summary__line order-summary__line--estimate">
+            <span>Previsao</span>
+            <strong>{{ currentOrder.estimatedDeliveryDeadlineAt }}</strong>
           </div>
         }
 

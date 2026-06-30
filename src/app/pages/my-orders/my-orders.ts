@@ -6,9 +6,10 @@ import { ApiService } from '../../core/api.service';
 import { ClientDto, OrderDto } from '../../core/api.models';
 import { ClientAuthService } from '../../core/client-auth.service';
 import {
-  ORDER_STATUS_STEPS,
+  OrderStatusStep,
   orderStatusIndex,
   orderStatusLabel,
+  orderStatusSteps,
 } from '../../core/order-status';
 
 const ORDERS_REFRESH_MS = 10000;
@@ -26,13 +27,14 @@ export class MyOrders implements OnDestroy {
   private routeSubscription?: Subscription;
   private refreshHandle?: ReturnType<typeof setInterval>;
 
-  protected readonly steps = ORDER_STATUS_STEPS;
   protected readonly client = signal<ClientDto | null>(this.clientAuth.getSession());
   protected readonly orders = signal<OrderDto[]>([]);
   protected readonly page = signal(1);
   protected readonly totalPages = signal(1);
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly deliveryConfirmationError = signal('');
+  protected readonly confirmingDeliveryOrderId = signal('');
   protected readonly selectedOrderId = signal('');
   protected readonly lastUpdated = signal('');
 
@@ -68,6 +70,10 @@ export class MyOrders implements OnDestroy {
     return orderStatusLabel(status);
   }
 
+  protected statusSteps(status: string): OrderStatusStep[] {
+    return orderStatusSteps(status);
+  }
+
   protected statusPillClass(status: string): string {
     if (status === 'Cancelado') {
       return 'order-status order-status--cancelled';
@@ -75,6 +81,10 @@ export class MyOrders implements OnDestroy {
 
     if (status === 'Entregue') {
       return 'order-status order-status--done';
+    }
+
+    if (status === 'EmAtraso') {
+      return 'order-status order-status--delayed';
     }
 
     return 'order-status';
@@ -91,9 +101,13 @@ export class MyOrders implements OnDestroy {
       return index === 0 ? 'order-step order-step--cancelled' : 'order-step';
     }
 
-    const currentIndex = orderStatusIndex(order.status);
+    const currentIndex = orderStatusIndex(order.status, this.statusSteps(order.status));
     if (index < currentIndex) {
       return 'order-step order-step--done';
+    }
+
+    if (index === currentIndex && order.status === 'EmAtraso') {
+      return 'order-step order-step--delayed';
     }
 
     if (index === currentIndex) {
@@ -101,6 +115,26 @@ export class MyOrders implements OnDestroy {
     }
 
     return 'order-step';
+  }
+
+  protected confirmDelivery(order: OrderDto): void {
+    if (!order.canClientConfirmDelivery || this.confirmingDeliveryOrderId()) {
+      return;
+    }
+
+    this.confirmingDeliveryOrderId.set(order.id);
+    this.deliveryConfirmationError.set('');
+
+    this.api.confirmOrderDelivered(order.id).subscribe({
+      next: () => {
+        this.confirmingDeliveryOrderId.set('');
+        this.loadOrders(false);
+      },
+      error: (error) => {
+        this.confirmingDeliveryOrderId.set('');
+        this.deliveryConfirmationError.set(error?.error?.error ?? 'Nao foi possivel marcar o pedido como entregue.');
+      },
+    });
   }
 
   private loadOrders(showLoading: boolean): void {
@@ -127,6 +161,7 @@ export class MyOrders implements OnDestroy {
         this.orders.set(result.items);
         this.totalPages.set(Math.max(1, result.totalPages));
         this.errorMessage.set('');
+        this.deliveryConfirmationError.set('');
         this.isLoading.set(false);
         this.lastUpdated.set(this.formatTime(new Date()));
       },

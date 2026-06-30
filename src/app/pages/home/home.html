@@ -419,6 +419,27 @@
             <p class="address-field__hint">Consultando CEP e montando o endereco...</p>
           }
 
+          @if (isLoadingDeliveryEstimate()) {
+            <div class="cart-delivery-estimate cart-delivery-estimate--loading">
+              <i class="fa fa-clock" aria-hidden="true"></i>
+              <span>Calculando previsao de entrega...</span>
+            </div>
+          } @else if (deliveryEstimate(); as estimate) {
+            <div class="cart-delivery-estimate">
+              <i class="fa fa-clock" aria-hidden="true"></i>
+              <div>
+                <span>Previsao de entrega</span>
+                <strong>{{ estimate.estimatedDeliveryDeadlineAt }}</strong>
+                <small>
+                  {{ estimate.estimatedDeliveryMinutes }} min no total
+                  ({{ estimate.estimatedPreparationMinutes }} min preparo + {{ estimate.estimatedTravelMinutes }} min entrega)
+                </small>
+              </div>
+            </div>
+          } @else if (deliveryEstimateError()) {
+            <p class="address-field__warning">{{ deliveryEstimateError() }}</p>
+          }
+
           <div class="cart-summary">
             <p>Subtotal</p>
             <span>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>

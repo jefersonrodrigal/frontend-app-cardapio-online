@@ -14,6 +14,7 @@ import {
   ClientDto,
   CreateClientPayload,
   CreateOrderPayload,
+  DeliveryEstimateDto,
   EstablishmentDto,
   IFoodIntegrationDto,
   IntegrationsOverviewDto,
@@ -128,11 +129,19 @@ export class ApiService {
     return this.http.get<ViaCepAddressResponse>(`https://viacep.com.br/ws/${cep}/json/`);
   }
 
-  getOrders(page: number, pageSize: number, date?: string) {
+  getOrders(page: number, pageSize: number, date?: string, search?: string, activeOnly = false) {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
 
     if (date) {
       params = params.set('date', date);
+    }
+
+    if (search?.trim()) {
+      params = params.set('search', search.trim());
+    }
+
+    if (activeOnly) {
+      params = params.set('activeOnly', 'true');
     }
 
     return this.http.get<PaginatedResult<OrderDto>>(`${this.baseUrl}/Orders`, { params });
@@ -152,8 +161,16 @@ export class ApiService {
     return this.http.get<OrderTrackingDto>(`${this.baseUrl}/Orders/track/${id}`);
   }
 
+  confirmOrderDelivered(id: string) {
+    return this.http.put<OrderTrackingDto>(`${this.baseUrl}/Orders/track/${id}/delivered`, {});
+  }
+
   advanceOrderStatus(id: string) {
     return this.http.put<OrderDto>(`${this.baseUrl}/Orders/${id}/advance`, {});
+  }
+
+  markOrderDelayed(id: string) {
+    return this.http.put<OrderDto>(`${this.baseUrl}/Orders/${id}/delay`, {});
   }
 
   cancelOrder(id: string) {
@@ -162,6 +179,14 @@ export class ApiService {
 
   createOrder(payload: CreateOrderPayload) {
     return this.http.post<OrderDto>(`${this.baseUrl}/Orders`, payload);
+  }
+
+  getDeliveryEstimate(address: string, orderType = 'Entrega') {
+    const params = new HttpParams()
+      .set('address', address)
+      .set('orderType', orderType);
+
+    return this.http.get<DeliveryEstimateDto>(`${this.baseUrl}/Orders/estimate`, { params });
   }
 
   uploadImage(file: File) {

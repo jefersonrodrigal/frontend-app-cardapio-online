@@ -161,6 +161,66 @@
   padding: 1.5rem;
 }
 
+.settings-group {
+  border-top: 1px solid rgb(228 228 231);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 1.5rem;
+}
+
+.settings-group:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.settings-group__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-group__eyebrow {
+  color: #b91c1c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settings-group__header h3 {
+  color: #18181b;
+  font-size: 1rem;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.settings-group__header p {
+  color: #71717a;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.settings-note {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid rgb(228 228 231);
+  border-radius: 0.75rem;
+  color: #52525b;
+  display: flex;
+  font-size: 0.88rem;
+  gap: 0.55rem;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+}
+
+.settings-note i {
+  color: #b91c1c;
+  flex: 0 0 auto;
+}
+
 .form-section-label {
   align-items: center;
   border-bottom: 1px solid rgb(228 228 231);
@@ -609,6 +669,27 @@
 
 .danger-button:hover {
   background: #fecaca;
+}
+
+.warning-button {
+  align-items: center;
+  align-self: flex-start;
+  background: #ffedd5;
+  border: 0;
+  border-radius: 999px;
+  color: #9a3412;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  transition: background 180ms ease;
+}
+
+.warning-button:hover {
+  background: #fed7aa;
 }
 
 /* ── Flow Steps ── */
@@ -1251,9 +1332,23 @@
   transition: border-color 180ms ease;
 }
 
+.orders-filter__input--search {
+  min-width: 14rem;
+}
+
 .orders-filter__input:focus {
   border-color: #b91c1c;
   outline: none;
+}
+
+.orders-filter__toggle {
+  align-items: center;
+  color: #3f3f46;
+  display: flex;
+  font-size: 0.875rem;
+  font-weight: 600;
+  gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .orders-filter__clear {
@@ -1279,14 +1374,24 @@
 
 .orders-filter__result {
   color: #52525b;
+  display: flex;
+  flex-direction: column;
   font-size: 0.85rem;
   font-weight: 500;
+  gap: 0.15rem;
   margin-left: auto;
+  text-align: right;
 }
 
 .orders-filter__result--muted {
   color: #a1a1aa;
   font-weight: 400;
+}
+
+.orders-filter__result small {
+  color: #a1a1aa;
+  font-size: 0.74rem;
+  font-weight: 500;
 }
 
 /* Empty state */
@@ -1439,6 +1544,7 @@
 .order-status--pendente   { background: #fef3c7; color: #92400e; }
 .order-status--em-preparo { background: #dbeafe; color: #1e40af; }
 .order-status--em-entrega { background: #ffedd5; color: #9a3412; }
+.order-status--em-atraso  { background: #fef3c7; color: #a16207; }
 .order-status--entregue   { background: #dcfce7; color: #15803d; }
 .order-status--cancelado  { background: #fee2e2; color: #991b1b; }
 
@@ -1510,7 +1616,8 @@
 
 .order-card__address,
 .order-card__note,
-.order-card__phone {
+.order-card__phone,
+.order-card__estimate {
   align-items: flex-start;
   color: #71717a;
   display: flex;
@@ -1521,7 +1628,8 @@
 
 .order-card__address i,
 .order-card__note i,
-.order-card__phone i {
+.order-card__phone i,
+.order-card__estimate i {
   color: #a1a1aa;
   flex-shrink: 0;
   margin-top: 0.1rem;
@@ -1550,6 +1658,7 @@
 }
 
 .order-card__actions .primary-button,
+.order-card__actions .warning-button,
 .order-card__actions .danger-button {
   font-size: 0.82rem;
   padding: 0.45rem 0.85rem;
@@ -1672,8 +1781,25 @@
     gap: 0.5rem;
   }
 
+  .orders-filter__label,
+  .orders-filter__input,
+  .orders-filter__input--search,
+  .orders-filter__toggle,
+  .orders-filter__clear {
+    width: 100%;
+  }
+
+  .orders-filter__input--search {
+    min-width: 0;
+  }
+
+  .orders-filter__clear {
+    justify-content: center;
+  }
+
   .orders-filter__result {
     margin-left: 0;
+    text-align: left;
     width: 100%;
   }
 
@@ -2199,6 +2325,49 @@
 }
 
 @media (max-width: 640px) {
+  .admin-header,
+  .admin-section__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-content {
+    padding: 1rem;
+  }
+
+  .admin-form {
+    border-radius: 1rem;
+    padding: 1rem;
+  }
+
+  .admin-tabs {
+    overflow-x: auto;
+    padding: 0 0.75rem;
+  }
+
+  .admin-tab {
+    flex: 0 0 auto;
+    padding: 0.9rem 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-note {
+    align-items: flex-start;
+  }
+
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    justify-content: center;
+    width: 100%;
+  }
+
   .inventory-grid {
     grid-template-columns: 1fr;
   }

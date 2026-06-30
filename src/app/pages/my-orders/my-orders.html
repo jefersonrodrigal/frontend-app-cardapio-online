@@ -42,6 +42,12 @@
       <a class="primary-link" routerLink="/home">Ver cardapio</a>
     </section>
   } @else {
+    @if (deliveryConfirmationError()) {
+      <section class="inline-alert inline-alert--error">
+        {{ deliveryConfirmationError() }}
+      </section>
+    }
+
     <section class="orders-list">
       @for (order of orders(); track order.id) {
         <article [class]="orderCardClass(order)">
@@ -58,7 +64,7 @@
 
           <div class="order-card__body">
             <div class="order-steps">
-              @for (step of steps; track step.status; let index = $index) {
+              @for (step of statusSteps(order.status); track step.status; let index = $index) {
                 <span [class]="stepClass(order, index)" [attr.title]="step.label"></span>
               }
             </div>
@@ -84,8 +90,25 @@
           </div>
 
           <div class="order-card__footer">
-            <span>Ultima atualizacao: {{ lastUpdated() || order.createdAt }}</span>
-            <a [routerLink]="['/order-tracking', order.id]">Ver acompanhamento</a>
+            <div class="order-card__footer-info">
+              <span>Ultima atualizacao: {{ lastUpdated() || order.createdAt }}</span>
+              @if (order.estimatedDeliveryDeadlineAt) {
+                <span>Previsao: {{ order.estimatedDeliveryDeadlineAt }}</span>
+              }
+            </div>
+            <div class="order-card__footer-actions">
+              @if (order.canClientConfirmDelivery) {
+                <button
+                  type="button"
+                  class="secondary-button order-card__confirm-button"
+                  [disabled]="confirmingDeliveryOrderId() === order.id"
+                  (click)="confirmDelivery(order)"
+                >
+                  {{ confirmingDeliveryOrderId() === order.id ? 'Confirmando...' : 'Marcar como entregue' }}
+                </button>
+              }
+              <a [routerLink]="['/order-tracking', order.id]">Ver acompanhamento</a>
+            </div>
           </div>
         </article>
       }

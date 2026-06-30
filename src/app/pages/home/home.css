@@ -710,6 +710,52 @@
   margin: 0.5rem 0 0;
 }
 
+.cart-delivery-estimate {
+  align-items: flex-start;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 0.9rem;
+  color: #166534;
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.cart-delivery-estimate--loading {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.cart-delivery-estimate i {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+}
+
+.cart-delivery-estimate div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.cart-delivery-estimate span {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cart-delivery-estimate strong {
+  color: #14532d;
+  font-size: 1.05rem;
+}
+
+.cart-delivery-estimate small {
+  color: #3f6212;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .cart-modal__actions {
   gap: 1rem;
   margin-top: 0.75rem;

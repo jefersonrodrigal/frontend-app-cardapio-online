@@ -3,12 +3,13 @@ import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiService } from '../../core/api.service';
-import { OrderTrackingDto } from '../../core/api.models';
+import { EstablishmentDto, OrderTrackingDto } from '../../core/api.models';
 import {
-  ORDER_STATUS_STEPS,
+  OrderStatusStep,
   isFinalOrderStatus,
   orderStatusIndex,
   orderStatusLabel,
+  orderStatusSteps,
 } from '../../core/order-status';
 
 const TRACKING_REFRESH_MS = 8000;
@@ -25,14 +26,18 @@ export class OrderTracking implements OnDestroy {
   private routeSubscription?: Subscription;
   private refreshHandle?: ReturnType<typeof setInterval>;
 
-  protected readonly steps = ORDER_STATUS_STEPS;
   protected readonly order = signal<OrderTrackingDto | null>(null);
+  protected readonly establishment = signal<EstablishmentDto | null>(null);
   protected readonly orderId = signal('');
   protected readonly isLoading = signal(true);
+  protected readonly isConfirmingDelivery = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly actionErrorMessage = signal('');
   protected readonly lastUpdated = signal('');
 
   constructor() {
+    this.loadEstablishment();
+
     this.routeSubscription = this.route.paramMap.subscribe((params) => {
       this.orderId.set(params.get('id') ?? '');
       this.loadOrder(true);
@@ -53,6 +58,10 @@ export class OrderTracking implements OnDestroy {
     return orderStatusLabel(status);
   }
 
+  protected statusSteps(status: string): OrderStatusStep[] {
+    return orderStatusSteps(status);
+  }
+
   protected statusPillClass(status: string): string {
     if (status === 'Cancelado') {
       return 'status-pill status-pill--cancelled';
@@ -60,6 +69,10 @@ export class OrderTracking implements OnDestroy {
 
     if (status === 'Entregue') {
       return 'status-pill status-pill--done';
+    }
+
+    if (status === 'EmAtraso') {
+      return 'status-pill status-pill--delayed';
     }
 
     return 'status-pill';
@@ -72,9 +85,13 @@ export class OrderTracking implements OnDestroy {
       return index === 0 ? 'tracking-step tracking-step--cancelled' : 'tracking-step';
     }
 
-    const currentIndex = orderStatusIndex(status);
+    const currentIndex = orderStatusIndex(status, this.statusSteps(status));
     if (index < currentIndex) {
       return 'tracking-step tracking-step--done';
+    }
+
+    if (index === currentIndex && status === 'EmAtraso') {
+      return 'tracking-step tracking-step--delayed';
     }
 
     if (index === currentIndex) {
@@ -82,6 +99,48 @@ export class OrderTracking implements OnDestroy {
     }
 
     return 'tracking-step';
+  }
+
+  protected canContactEstablishmentOnWhatsApp(): boolean {
+    return this.order()?.status === 'EmAtraso' && !!this.establishmentWhatsApp();
+  }
+
+  protected confirmDelivery(): void {
+    const order = this.order();
+
+    if (!order?.canClientConfirmDelivery || this.isConfirmingDelivery()) {
+      return;
+    }
+
+    this.isConfirmingDelivery.set(true);
+    this.actionErrorMessage.set('');
+
+    this.api.confirmOrderDelivered(order.id).subscribe({
+      next: (updatedOrder) => {
+        this.order.set(updatedOrder);
+        this.isConfirmingDelivery.set(false);
+        this.lastUpdated.set(this.formatTime(new Date()));
+        this.stopPolling();
+      },
+      error: (error) => {
+        this.isConfirmingDelivery.set(false);
+        this.actionErrorMessage.set(error?.error?.error ?? 'Nao foi possivel marcar o pedido como entregue.');
+      },
+    });
+  }
+
+  protected contactEstablishmentOnWhatsApp(): void {
+    const order = this.order();
+    const phone = this.establishmentWhatsApp();
+
+    if (!order || !phone) {
+      return;
+    }
+
+    const message = encodeURIComponent(
+      `Ola, estou acompanhando o pedido ${order.number} e ele aparece como em atraso. Poderiam me atualizar?`,
+    );
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank', 'noopener');
   }
 
   private loadOrder(showLoading: boolean): void {
@@ -100,6 +159,7 @@ export class OrderTracking implements OnDestroy {
       next: (order) => {
         this.order.set(order);
         this.errorMessage.set('');
+        this.actionErrorMessage.set('');
         this.isLoading.set(false);
         this.lastUpdated.set(this.formatTime(new Date()));
 
@@ -112,6 +172,25 @@ export class OrderTracking implements OnDestroy {
         this.errorMessage.set(error?.error?.error ?? 'Nao foi possivel carregar o acompanhamento.');
       },
     });
+  }
+
+  private loadEstablishment(): void {
+    this.api.getEstablishment().subscribe({
+      next: (establishment) => {
+        this.establishment.set(establishment);
+      },
+    });
+  }
+
+  private establishmentWhatsApp(): string {
+    const rawPhone = this.establishment()?.whatsapp ?? '';
+    const digits = rawPhone.replace(/\D/g, '');
+
+    if (!digits) {
+      return '';
+    }
+
+    return digits.startsWith('55') || digits.length > 11 ? digits : `55${digits}`;
   }
 
   private restartPolling(): void {

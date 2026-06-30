@@ -18,6 +18,7 @@ O frontend cobre dois fluxos principais:
 - Itens em promocao no carrinho exibem tag "Promo" e preco original riscado
 - Busca de endereco via CEP (ViaCEP)
 - Acesso rapido para clientes cadastrados
+- Acompanhamento do pedido com previsao de entrega, status `Em atraso` apenas quando aplicavel, contato via WhatsApp da loja e confirmacao de entrega pelo cliente quando o pedido ja saiu para entrega
 
 **Painel administrativo (`/admin`)**
 - Protegido por JWT Bearer
@@ -25,8 +26,8 @@ O frontend cobre dois fluxos principais:
 - Gerenciamento de produtos vinculados a categorias com suporte a promocao (desconto em % ou valor absoluto, com sincronizacao automatica entre os dois campos)
 - Gerenciamento de grupos de adicionais por produto: criar, editar e excluir grupos; criar, editar, excluir e ativar/desativar itens dentro de cada grupo
 - Visualizacao de clientes cadastrados
-- Acompanhamento e avanco de status de pedidos com badge do tipo (Entrega / Retirada / Consumo local) e taxa de entrega destacada nos cards
-- Configuracoes do estabelecimento com upload de logo e campo de taxa de entrega
+- Acompanhamento e avanco de status de pedidos com badge do tipo (Entrega / Retirada / Consumo local), taxa de entrega, previsao e acao manual para marcar atraso
+- Configuracoes do estabelecimento com upload de logo, taxa de entrega e parametros de prazo estimado
 - Registro interno de pedidos com calculo automatico da taxa quando o tipo e Entrega
 - Configuracao de integracoes externas (iFood, Anotai, Uber Eats, 99Food, AI Agents, WhatsApp, Take Blip, Zenvia)
 
@@ -232,11 +233,11 @@ Erros retornados pelo backend (validacoes de grupo, conflitos) sao exibidos inli
 
 | Aba | Descricao |
 |---|---|
-| Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp, horario, taxa de entrega e links de redes sociais (Instagram, Facebook, TikTok, X/Twitter) |
+| Estabelecimento | Nome, logo (upload), categoria, endereco, WhatsApp, horario, taxa de entrega, parametros de prazo estimado e links de redes sociais (Instagram, Facebook, TikTok, X/Twitter) |
 | Produtos | CRUD de produtos com upload de imagem; categoria selecionada via lista dinamica; suporte a promocao com campos sincronizados; secao de grupos de adicionais ao editar um produto existente |
 | Categorias | CRUD de categorias; slug auto-gerado e imutavel |
 | Clientes | Listagem somente leitura |
-| Pedidos | Acompanhamento com avanco de status e cancelamento; filtro por data; badge de tipo do pedido e taxa de entrega exibida nos cards |
+| Pedidos | Acompanhamento com avanco de status, marcacao de atraso e cancelamento; filtro por data; badge de tipo do pedido, taxa de entrega e previsao exibidas nos cards |
 | Integracoes | Formularios por plataforma com toggle de ativacao e campos especificos |
 
 ## Servico HTTP
@@ -279,6 +280,8 @@ authenticateClient(payload): Observable<ClientDto>
 // Pedidos
 getOrders(page, pageSize, date?): Observable<PaginatedResult<OrderDto>>
 advanceOrderStatus(id): Observable<OrderDto>
+markOrderDelayed(id): Observable<OrderDto>
+confirmOrderDelivered(id): Observable<OrderTrackingDto>
 cancelOrder(id): Observable<OrderDto>
 createOrder(payload): Observable<OrderDto>
 
@@ -361,6 +364,13 @@ interface OrderDto {
   source: string;
   orderType: string | null;  // 'Entrega' | 'Retirada' | 'ConsumoLocal' | null
   note: string | null;
+  estimatedPreparationMinutes: number | null;
+  estimatedTravelMinutes: number | null;
+  estimatedDeliveryMinutes: number | null;
+  estimatedReadyAt: string | null;
+  estimatedDeliveryDeadlineAt: string | null;
+  markedDelayedAt: string | null;
+  canClientConfirmDelivery: boolean;
   items: OrderItemDto[];
 }
 
@@ -374,6 +384,8 @@ interface EstablishmentDto {
   closeTime: string;
   deliveryFee: number;
   sendOrderTrackingViaWhatsApp: boolean;
+  preparationTimeMinutes: number;
+  deliverySafetyMarginMinutes: number;
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   tikTokUrl?: string | null;
@@ -471,6 +483,49 @@ O registro interno de pedidos recalcula o total conforme o tipo selecionado:
 - **Retirada** e **Consumo local**: apenas subtotal dos itens
 
 O total exibido no formulario interno ja reflete a taxa antes de salvar. Nos cards de pedidos existentes, quando `order.deliveryFee > 0`, uma linha informativa mostra o valor da taxa separado do total.
+
+## Prazo estimado e status Em atraso
+
+### Configuracao no painel administrativo
+
+Na aba **Estabelecimento**, o administrador configura os parametros usados pelo backend para estimar o prazo:
+
+- **Tempo de preparo (min)**: tempo padrao de cozinha antes da entrega
+- **Margem de seguranca (min)**: folga operacional somada ao deslocamento
+
+O deslocamento usa uma velocidade media interna calculada pela plataforma conforme a distancia estimada; a loja nao configura esse valor no painel. Os campos de prazo sao enviados junto com o restante do `EstablishmentDto`. Ao criar um pedido, o backend calcula e grava um snapshot da previsao no proprio pedido; mudar a configuracao depois nao altera pedidos ja criados.
+
+### Exibicao para cliente e admin
+
+O frontend exibe `estimatedDeliveryDeadlineAt` como **Previsao**:
+
+- no carrinho, depois que o cliente informa CEP, numero e endereco de entrega, antes de finalizar o pedido
+- no card do pedido no painel administrativo
+- em **Meus pedidos** para clientes logados
+- na tela publica de acompanhamento (`/order-tracking/:id`)
+
+No carrinho, a tela consulta `GET /api/Orders/estimate` com debounce enquanto os dados de endereco mudam. Essa consulta e apenas uma previa; o pedido criado ainda recebe um snapshot definitivo calculado pelo backend no momento do `POST /api/Orders`.
+
+O status **Em atraso** nao fica visivel como etapa normal do acompanhamento. A timeline padrao mostra apenas:
+
+```text
+Recebido -> Em preparo -> Saiu para entrega -> Entregue
+```
+
+Quando o backend retorna `status: "EmAtraso"`, a tela injeta a etapa **Em atraso** antes de **Entregue**, mostra o alerta de atraso e libera o botao **Contactar no WhatsApp** usando o WhatsApp cadastrado no estabelecimento.
+
+Quando o backend retorna `canClientConfirmDelivery: true`, o cliente ve o botao **Marcar como entregue** na tela publica de acompanhamento e em **Meus pedidos**. Esse botao chama `PUT /api/Orders/track/{id}/delivered` e so fica disponivel depois que a loja marcou o pedido como **Saiu para entrega**.
+
+### Quando o status muda
+
+O status pode ir para `EmAtraso` de duas formas:
+
+- automaticamente, quando o backend detectar que o pedido passou de `estimatedDeliveryDeadlineAt`
+- manualmente, pelo botao **Marcar atraso** na aba **Pedidos** do admin
+
+Pedidos em atraso continuam aparecendo como pedidos ativos. O admin ainda pode avancar para **Entregue** quando finalizar a entrega.
+
+Na aba **Pedidos**, o painel administrativo atualiza a lista automaticamente em intervalos curtos sem recarregar a pagina. Essa atualizacao tambem recalcula os cards de **Pendentes**, **Em andamento** e **Receita (entregues)**. A tela permite filtrar por data, buscar pelo nome do cliente e ativar **Apenas em andamento**, que oculta pedidos `Entregue` e `Cancelado`.
 
 ## Promocao de produtos
 

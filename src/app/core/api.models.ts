@@ -18,6 +18,8 @@ export interface EstablishmentDto {
   closeTime: string;
   deliveryFee: number;
   sendOrderTrackingViaWhatsApp: boolean;
+  preparationTimeMinutes: number;
+  deliverySafetyMarginMinutes: number;
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   tikTokUrl?: string | null;
@@ -156,6 +158,13 @@ export interface OrderDto {
   source: string;
   orderType: string | null;
   note: string | null;
+  estimatedPreparationMinutes: number | null;
+  estimatedTravelMinutes: number | null;
+  estimatedDeliveryMinutes: number | null;
+  estimatedReadyAt: string | null;
+  estimatedDeliveryDeadlineAt: string | null;
+  markedDelayedAt: string | null;
+  canClientConfirmDelivery: boolean;
   items: OrderItemDto[];
 }
 
@@ -171,7 +180,23 @@ export interface OrderTrackingDto {
   source: string;
   orderType: string | null;
   note: string | null;
+  estimatedPreparationMinutes: number | null;
+  estimatedTravelMinutes: number | null;
+  estimatedDeliveryMinutes: number | null;
+  estimatedReadyAt: string | null;
+  estimatedDeliveryDeadlineAt: string | null;
+  markedDelayedAt: string | null;
+  canClientConfirmDelivery: boolean;
   items: OrderItemDto[];
+}
+
+export interface DeliveryEstimateDto {
+  estimatedPreparationMinutes: number;
+  estimatedTravelMinutes: number;
+  estimatedDeliveryMinutes: number;
+  estimatedDeliveryDistanceKm: number;
+  estimatedReadyAt: string;
+  estimatedDeliveryDeadlineAt: string;
 }
 
 export interface ProductPayload {

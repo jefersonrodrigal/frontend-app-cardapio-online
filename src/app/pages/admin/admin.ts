@@ -1,6 +1,6 @@
 import { CurrencyPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
@@ -33,7 +33,7 @@ import {
 
 type Tab = 'estabelecimento' | 'produtos' | 'categorias' | 'estoque' | 'clientes' | 'pedidos' | 'integracoes';
 type IntegrationMenu = 'ifood' | 'anotai' | 'ubereats' | '99food' | 'aiagents' | 'whatsapp' | 'takeblip' | 'zenvia';
-type OrderStatus = 'pendente' | 'em_preparo' | 'em_entrega' | 'entregue' | 'cancelado';
+type OrderStatus = 'pendente' | 'em_preparo' | 'em_entrega' | 'em_atraso' | 'entregue' | 'cancelado';
 type OrderSource = 'whatsapp' | 'ifood' | 'site' | 'interno';
 type InternalOrderType = 'ConsumoLocal' | 'Retirada' | 'Entrega';
 type OrderType = 'consumolocal' | 'retirada' | 'entrega';
@@ -59,6 +59,7 @@ const PRODUCTS_PER_PAGE = 5;
 const INVENTORY_PER_PAGE = 8;
 const CLIENTS_PER_PAGE = 5;
 const ORDERS_PER_PAGE = 5;
+const ORDERS_AUTO_REFRESH_MS = 10000;
 
 @Component({
   selector: 'app-admin',
@@ -66,10 +67,12 @@ const ORDERS_PER_PAGE = 5;
   templateUrl: './admin.html',
   styleUrl: './admin.css',
 })
-export class Admin {
+export class Admin implements OnDestroy {
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
+  private ordersAutoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private ordersFilterTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly activeTab = signal<Tab>('estabelecimento');
   protected readonly activeIntegrationMenu = signal<IntegrationMenu>('ifood');
@@ -86,6 +89,7 @@ export class Admin {
   protected readonly isLoadingInventoryMovements = signal(false);
   protected readonly isLoadingClients = signal(false);
   protected readonly isLoadingOrders = signal(false);
+  protected readonly isRefreshingOrders = signal(false);
   protected readonly isLoadingIntegrations = signal(false);
   protected readonly integrationSaved = signal('');
   protected readonly isSavingInternalOrder = signal(false);
@@ -209,8 +213,15 @@ export class Admin {
   });
 
   protected readonly filterDate = signal('');
+  protected readonly orderSearch = signal('');
+  protected readonly activeOrdersOnly = signal(false);
+  protected readonly ordersLastUpdatedAt = signal('');
   protected filterDateValue = '';
+  protected orderSearchValue = '';
   protected readonly filteredOrders = computed(() => this.orders());
+  protected readonly hasOrderFilters = computed(() =>
+    Boolean(this.filterDate() || this.orderSearch().trim() || this.activeOrdersOnly()),
+  );
   protected readonly totalOrderPages = computed(() =>
     Math.max(1, Math.ceil(this.filteredOrders().length / ORDERS_PER_PAGE)),
   );
@@ -237,7 +248,7 @@ export class Admin {
   protected readonly activeOrdersCount = computed(() =>
     this.filteredOrders().filter((o) => {
       const s = this.normalizeStatus(o.status);
-      return s === 'em_preparo' || s === 'em_entrega';
+      return s === 'em_preparo' || s === 'em_entrega' || s === 'em_atraso';
     }).length,
   );
   protected readonly todayRevenue = computed(() =>
@@ -265,6 +276,8 @@ export class Admin {
     closeTime: '22:00',
     deliveryFee: 0,
     sendOrderTrackingViaWhatsApp: false,
+    preparationTimeMinutes: 30,
+    deliverySafetyMarginMinutes: 10,
     instagramUrl: '',
     facebookUrl: '',
     tikTokUrl: '',
@@ -374,7 +387,18 @@ export class Admin {
     this.loadInventoryMovements();
     this.loadClients();
     this.loadOrders();
+    this.startOrdersAutoRefresh();
     this.loadIntegrations();
+  }
+
+  ngOnDestroy(): void {
+    if (this.ordersAutoRefreshTimer) {
+      clearInterval(this.ordersAutoRefreshTimer);
+    }
+
+    if (this.ordersFilterTimer) {
+      clearTimeout(this.ordersFilterTimer);
+    }
   }
 
   protected setTab(tab: Tab): void {
@@ -996,9 +1020,38 @@ export class Admin {
     this.loadOrders();
   }
 
+  protected setOrderSearch(search: string): void {
+    this.orderSearch.set(search);
+    this.ordersPage.set(1);
+    this.scheduleOrdersReload();
+  }
+
+  protected clearOrderSearch(): void {
+    this.orderSearchValue = '';
+    this.orderSearch.set('');
+    this.ordersPage.set(1);
+    this.loadOrders();
+  }
+
+  protected setActiveOrdersOnly(activeOnly: boolean): void {
+    this.activeOrdersOnly.set(activeOnly);
+    this.ordersPage.set(1);
+    this.loadOrders();
+  }
+
   protected clearDateFilter(): void {
     this.filterDateValue = '';
     this.filterDate.set('');
+    this.ordersPage.set(1);
+    this.loadOrders();
+  }
+
+  protected clearOrderFilters(): void {
+    this.filterDateValue = '';
+    this.orderSearchValue = '';
+    this.filterDate.set('');
+    this.orderSearch.set('');
+    this.activeOrdersOnly.set(false);
     this.ordersPage.set(1);
     this.loadOrders();
   }
@@ -1011,10 +1064,22 @@ export class Admin {
     this.api.advanceOrderStatus(id).subscribe({
       next: () => {
         this.errorMessage.set('');
-        this.loadOrders();
+        this.loadOrders({ silent: true });
       },
       error: (error: HttpErrorResponse) => {
         this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel avancar o status do pedido.'));
+      },
+    });
+  }
+
+  protected markOrderDelayed(id: string): void {
+    this.api.markOrderDelayed(id).subscribe({
+      next: () => {
+        this.errorMessage.set('');
+        this.loadOrders({ silent: true });
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel marcar o pedido como atrasado.'));
       },
     });
   }
@@ -1023,7 +1088,7 @@ export class Admin {
     this.api.cancelOrder(id).subscribe({
       next: () => {
         this.errorMessage.set('');
-        this.loadOrders();
+        this.loadOrders({ silent: true });
         this.loadInventory();
         this.loadInventoryMovements();
       },
@@ -1035,12 +1100,17 @@ export class Admin {
 
   protected canAdvance(status: string): boolean {
     const s = this.normalizeStatus(status);
+    return s === 'pendente' || s === 'em_preparo' || s === 'em_entrega' || s === 'em_atraso';
+  }
+
+  protected canMarkDelayed(status: string): boolean {
+    const s = this.normalizeStatus(status);
     return s === 'pendente' || s === 'em_preparo' || s === 'em_entrega';
   }
 
   protected canCancel(status: string): boolean {
     const s = this.normalizeStatus(status);
-    return s === 'pendente' || s === 'em_preparo';
+    return s === 'pendente' || s === 'em_preparo' || s === 'em_atraso';
   }
 
   protected orderStatusLabel(status: string): string {
@@ -1048,6 +1118,7 @@ export class Admin {
       pendente: 'Pendente',
       em_preparo: 'Em Preparo',
       em_entrega: 'Em Entrega',
+      em_atraso: 'Em Atraso',
       entregue: 'Entregue',
       cancelado: 'Cancelado',
     };
@@ -1059,6 +1130,7 @@ export class Admin {
       pendente: 'Iniciar Preparo',
       em_preparo: 'Saiu p/ Entrega',
       em_entrega: 'Confirmar Entrega',
+      em_atraso: 'Confirmar Entrega',
     };
     return labels[this.normalizeStatus(status)] ?? '';
   }
@@ -1424,21 +1496,61 @@ export class Admin {
     });
   }
 
-  private loadOrders(): void {
-    this.isLoadingOrders.set(true);
+  private loadOrders(options: { silent?: boolean } = {}): void {
+    const silent = options.silent ?? false;
 
-    this.api.getOrders(1, 1000, this.filterDate() || undefined).subscribe({
+    if (silent) {
+      this.isRefreshingOrders.set(true);
+    } else {
+      this.isLoadingOrders.set(true);
+    }
+
+    this.api.getOrders(
+      1,
+      1000,
+      this.filterDate() || undefined,
+      this.orderSearch() || undefined,
+      this.activeOrdersOnly(),
+    ).subscribe({
       next: (result) => {
         this.orders.set(result.items);
         this.ordersPage.set(
           Math.min(this.ordersPage(), Math.max(1, Math.ceil(result.items.length / ORDERS_PER_PAGE))),
         );
+        this.ordersLastUpdatedAt.set(this.formatRefreshTime());
         this.isLoadingOrders.set(false);
+        this.isRefreshingOrders.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar os pedidos.'));
+        if (!silent) {
+          this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar os pedidos.'));
+        }
+
         this.isLoadingOrders.set(false);
+        this.isRefreshingOrders.set(false);
       },
+    });
+  }
+
+  private scheduleOrdersReload(): void {
+    if (this.ordersFilterTimer) {
+      clearTimeout(this.ordersFilterTimer);
+    }
+
+    this.ordersFilterTimer = setTimeout(() => this.loadOrders(), 350);
+  }
+
+  private startOrdersAutoRefresh(): void {
+    this.ordersAutoRefreshTimer = setInterval(() => {
+      this.loadOrders({ silent: true });
+    }, ORDERS_AUTO_REFRESH_MS);
+  }
+
+  private formatRefreshTime(): string {
+    return new Date().toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
     });
   }
 
@@ -1470,6 +1582,9 @@ export class Admin {
         return 'em_preparo';
       case 'ementrega':
         return 'em_entrega';
+      case 'ematraso':
+      case 'em_atraso':
+        return 'em_atraso';
       case 'entregue':
         return 'entregue';
       case 'cancelado':

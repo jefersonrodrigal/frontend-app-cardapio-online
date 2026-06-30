@@ -56,6 +56,7 @@
 }
 
 .status-panel__header p,
+.status-panel__estimate,
 .tracking-step p,
 .order-summary__address p,
 .state-panel p,
@@ -68,6 +69,17 @@
   font-size: clamp(1.75rem, 3vw, 2.5rem);
   line-height: 1.05;
   margin: 0.2rem 0 0.35rem;
+}
+
+.status-panel__estimate {
+  background: #f8fafc;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.88rem;
+  font-weight: 800;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  padding: 0.35rem 0.65rem;
 }
 
 .eyebrow {
@@ -99,6 +111,11 @@
 .status-pill--cancelled {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.status-pill--delayed {
+  background: #fef3c7;
+  color: #a16207;
 }
 
 .tracking-steps {
@@ -159,6 +176,17 @@
   color: #fff;
 }
 
+.tracking-step--delayed {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  box-shadow: 0 10px 24px rgb(245 158 11 / 0.12);
+}
+
+.tracking-step--delayed .tracking-step__marker {
+  background: #f59e0b;
+  color: #fff;
+}
+
 .status-panel__alert {
   background: #fef2f2;
   border-radius: 0.85rem;
@@ -166,6 +194,96 @@
   font-weight: 700;
   margin: 1rem 0 0;
   padding: 0.85rem;
+}
+
+.status-panel__alert p {
+  color: inherit;
+  font-weight: 500;
+  margin: 0.2rem 0 0;
+}
+
+.status-panel__alert--delayed {
+  align-items: center;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.status-panel__confirmation {
+  align-items: center;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 0.85rem;
+  color: #14532d;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1rem 0 0;
+  padding: 0.85rem;
+}
+
+.status-panel__confirmation p {
+  color: inherit;
+  margin: 0.2rem 0 0;
+}
+
+.status-panel__action-error {
+  background: #fef2f2;
+  border-radius: 0.85rem;
+  color: #991b1b;
+  font-weight: 700;
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+}
+
+.whatsapp-button {
+  align-items: center;
+  background: #16a34a;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  font: inherit;
+  font-weight: 800;
+  gap: 0.45rem;
+  justify-content: center;
+  min-height: 2.7rem;
+  padding: 0.7rem 1rem;
+}
+
+.whatsapp-button:hover {
+  background: #15803d;
+}
+
+.delivered-button {
+  align-items: center;
+  background: #16a34a;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  font: inherit;
+  font-weight: 800;
+  gap: 0.45rem;
+  justify-content: center;
+  min-height: 2.7rem;
+  padding: 0.7rem 1rem;
+}
+
+.delivered-button:hover {
+  background: #15803d;
+}
+
+.delivered-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .status-panel__updated {
@@ -278,12 +396,16 @@
   .tracking-header__actions,
   .order-summary__header,
   .order-summary__item,
-  .order-summary__line {
+  .order-summary__line,
+  .status-panel__confirmation,
+  .status-panel__alert--delayed {
     flex-direction: column;
   }
 
   .primary-link,
-  .secondary-button {
+  .secondary-button,
+  .delivered-button,
+  .whatsapp-button {
     width: 100%;
   }
 }
