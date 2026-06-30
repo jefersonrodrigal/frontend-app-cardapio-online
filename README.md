@@ -515,16 +515,4 @@ O `CartService.add()` usa o `promotionalPrice` como preco efetivo quando `isOnPr
 {{ item.price | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
 ```
 
-## Pontos de atencao
 
-- a URL do backend esta hardcoded em `environment.ts`; em producao, atualizar `environment.prod.ts`
-- o `isProtectedApiRequest` em `api.config.ts` e a fonte de verdade sobre quais rotas levam token; qualquer novo endpoint protegido precisa ser registrado la; endpoints de additional-groups sao cobertos pela regra existente de `/Products` (POST/PUT/DELETE protegidos, GET publico)
-- os endpoints de additional-groups no `ApiService` usam `/Products/` com P maiusculo para corresponder exatamente ao prefixo verificado em `isProtectedApiRequest`; usar minusculo faria o interceptor nao enviar o token e retornar 401
-- o admin carrega todas as entidades no construtor (products 1000, clients 1000, orders 1000) para paginacao local; em bases grandes, considerar paginacao server-side
-
-## Sugestoes de proximos passos
-
-- adicionar testes unitarios para `ApiService`, `CartService` e computed signals criticos
-- implementar paginacao server-side no admin para grandes volumes
-- adicionar feedback visual (skeleton loaders) durante carregamento inicial do cardapio
-- proteger a rota `/admin` com um `AuthGuard` baseado em `AuthService`
