@@ -138,3 +138,34 @@
 .auth-card__footer a:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 480px) {
+  .auth-page {
+    align-items: flex-start;
+    padding: 1rem 0.75rem;
+  }
+
+  .auth-card {
+    border-radius: 1rem;
+    padding: 1.25rem;
+  }
+
+  .auth-card__header {
+    margin-bottom: 1.25rem;
+  }
+
+  .auth-card__header h1 {
+    font-size: 1.45rem;
+    line-height: 1.15;
+  }
+
+  .fieldset {
+    border-radius: 0.85rem;
+    padding: 1rem;
+  }
+
+  .field input,
+  .primary-button {
+    min-height: 3rem;
+  }
+}

@@ -2,6 +2,7 @@
   margin: 0 auto;
   max-width: 72rem;
   padding: 2rem 1rem 3rem;
+  width: 100%;
 }
 
 .orders-header {
@@ -91,6 +92,7 @@
 .order-card {
   display: grid;
   gap: 1rem;
+  min-width: 0;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
@@ -114,6 +116,12 @@
   display: flex;
   gap: 1rem;
   justify-content: space-between;
+}
+
+.order-card__header > div,
+.order-card__footer-info,
+.order-items__row > span:first-child {
+  min-width: 0;
 }
 
 .order-items__unit-price {
@@ -296,6 +304,10 @@
 }
 
 @media (max-width: 720px) {
+  .orders-page {
+    padding: 1.25rem 0.75rem 2rem;
+  }
+
   .orders-header,
   .order-card__header,
   .order-card__footer,
@@ -312,11 +324,33 @@
   .order-card__footer-actions,
   .orders-pagination {
     flex-direction: column;
+    width: 100%;
   }
 
   .primary-link,
   .secondary-button,
   .secondary-link {
     width: 100%;
+  }
+
+  .order-status {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .state-panel,
+  .inline-alert,
+  .order-card {
+    border-radius: 0.9rem;
+    padding: 1rem;
+  }
+
+  .order-items__row {
+    gap: 0.35rem;
+  }
+
+  .order-card__total strong {
+    font-size: 1.1rem;
   }
 }

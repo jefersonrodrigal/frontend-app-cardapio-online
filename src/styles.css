@@ -1,5 +1,6 @@
 html {
   font-family: 'Poppins', sans-serif;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -7,13 +8,36 @@ body {
     radial-gradient(circle at top, rgb(254 242 242), transparent 38%),
     linear-gradient(180deg, #f8fafc 0%, #fff7ed 100%);
   margin: 0;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 * {
   box-sizing: border-box;
 }
 
+img,
+picture,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
 button,
-input {
+input,
+select,
+textarea {
   font-family: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 720px) {
+  body {
+    padding-bottom: calc(4.8rem + env(safe-area-inset-bottom));
+  }
 }

@@ -2,6 +2,7 @@
   margin: 0 auto;
   max-width: 72rem;
   padding: 2rem 1rem 3rem;
+  width: 100%;
 }
 
 .tracking-header,
@@ -53,6 +54,7 @@
   display: flex;
   gap: 1rem;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .status-panel__header p,
@@ -131,6 +133,7 @@
   display: grid;
   gap: 0.85rem;
   grid-template-columns: auto 1fr;
+  min-width: 0;
   padding: 0.9rem;
 }
 
@@ -210,6 +213,11 @@
   display: flex;
   gap: 1rem;
   justify-content: space-between;
+}
+
+.status-panel__alert--delayed > div,
+.status-panel__confirmation > div {
+  min-width: 0;
 }
 
 .status-panel__confirmation {
@@ -380,6 +388,10 @@
 }
 
 @media (max-width: 760px) {
+  .tracking-page {
+    padding: 1.25rem 0.75rem 2rem;
+  }
+
   .tracking-header,
   .tracking-layout {
     grid-template-columns: 1fr;
@@ -407,5 +419,24 @@
   .delivered-button,
   .whatsapp-button {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .status-panel,
+  .order-summary,
+  .state-panel {
+    border-radius: 0.9rem;
+    padding: 1rem;
+  }
+
+  .tracking-step {
+    gap: 0.65rem;
+    padding: 0.8rem;
+  }
+
+  .tracking-step__marker {
+    height: 1.8rem;
+    width: 1.8rem;
   }
 }

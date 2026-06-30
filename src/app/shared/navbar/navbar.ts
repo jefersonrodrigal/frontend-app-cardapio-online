@@ -14,6 +14,10 @@ export class Navbar {
 
   protected readonly cartCount = this.cartService.count;
 
+  protected isTrackingRoute(): boolean {
+    return this.router.url.startsWith('/order-tracking');
+  }
+
   protected openCart(): void {
     if (this.router.url.startsWith('/home')) {
       this.cartService.open();
