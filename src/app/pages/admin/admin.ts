@@ -21,6 +21,8 @@ import {
   InventoryMovementDto,
   InventoryMovementPayload,
   InventoryProductDto,
+  NeighborhoodDeliveryFeeDto,
+  NeighborhoodDeliveryFeePayload,
   NinetyNineFoodIntegrationDto,
   OrderDto,
   ProductDto,
@@ -112,6 +114,12 @@ export class Admin implements OnDestroy {
   protected readonly editingCategoryName = signal<string | null>(null);
   protected readonly catSaved = signal(false);
   protected catForm: CategoryPayload = { name: '', sortOrder: 1 };
+
+  protected readonly neighborhoodFees = signal<NeighborhoodDeliveryFeeDto[]>([]);
+  protected readonly showNeighborhoodFeeForm = signal(false);
+  protected readonly editingNeighborhoodFeeId = signal<number | null>(null);
+  protected readonly neighborhoodFeeSaved = signal(false);
+  protected neighborhoodFeeForm: NeighborhoodDeliveryFeePayload = { neighborhood: '', fee: 0, isActive: true };
 
   protected readonly products = signal<Product[]>([]);
   protected readonly inventoryProducts = signal<InventoryProductDto[]>([]);
@@ -259,9 +267,7 @@ export class Admin implements OnDestroy {
   protected readonly internalOrderSubtotal = computed(() =>
     this.internalOrderItems().reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
   );
-  protected readonly internalOrderDeliveryFee = computed(() =>
-    this.internalOrderType() === 'Entrega' ? (this.estForm.deliveryFee ?? 0) : 0,
-  );
+  protected readonly internalOrderDeliveryFee = computed(() => 0);
   protected readonly internalOrderTotal = computed(
     () => this.internalOrderSubtotal() + this.internalOrderDeliveryFee(),
   );
@@ -274,7 +280,6 @@ export class Admin implements OnDestroy {
     whatsapp: '',
     openTime: '18:00',
     closeTime: '22:00',
-    deliveryFee: 0,
     sendOrderTrackingViaWhatsApp: false,
     preparationTimeMinutes: 30,
     deliverySafetyMarginMinutes: 10,
@@ -382,6 +387,7 @@ export class Admin implements OnDestroy {
   constructor() {
     this.loadEstablishment();
     this.loadCategories();
+    this.loadNeighborhoodFees();
     this.loadProducts();
     this.loadInventory();
     this.loadInventoryMovements();
@@ -1409,6 +1415,66 @@ export class Admin implements OnDestroy {
 
   private generateInternalOrderPhone(): string {
     return `INT-${Date.now().toString().slice(-12)}`;
+  }
+
+  protected openAddNeighborhoodFee(): void {
+    this.editingNeighborhoodFeeId.set(null);
+    this.neighborhoodFeeForm = { neighborhood: '', fee: 0, isActive: true };
+    this.showNeighborhoodFeeForm.set(true);
+  }
+
+  protected editNeighborhoodFee(nf: NeighborhoodDeliveryFeeDto): void {
+    this.editingNeighborhoodFeeId.set(nf.id);
+    this.neighborhoodFeeForm = { neighborhood: nf.neighborhood, fee: nf.fee, isActive: nf.isActive };
+    this.showNeighborhoodFeeForm.set(true);
+  }
+
+  protected cancelNeighborhoodFeeForm(): void {
+    this.showNeighborhoodFeeForm.set(false);
+    this.editingNeighborhoodFeeId.set(null);
+  }
+
+  protected saveNeighborhoodFee(): void {
+    if (!this.neighborhoodFeeForm.neighborhood.trim()) return;
+
+    const editingId = this.editingNeighborhoodFeeId();
+    const request = editingId !== null
+      ? this.api.updateNeighborhoodDeliveryFee(editingId, this.neighborhoodFeeForm)
+      : this.api.createNeighborhoodDeliveryFee(this.neighborhoodFeeForm);
+
+    request.subscribe({
+      next: () => {
+        this.neighborhoodFeeSaved.set(true);
+        this.errorMessage.set('');
+        window.setTimeout(() => this.neighborhoodFeeSaved.set(false), 3000);
+        this.cancelNeighborhoodFeeForm();
+        this.loadNeighborhoodFees();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel salvar a taxa de bairro.'));
+      },
+    });
+  }
+
+  protected deleteNeighborhoodFee(id: number): void {
+    this.api.deleteNeighborhoodDeliveryFee(id).subscribe({
+      next: () => {
+        this.errorMessage.set('');
+        this.loadNeighborhoodFees();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel excluir a taxa de bairro.'));
+      },
+    });
+  }
+
+  private loadNeighborhoodFees(): void {
+    this.api.getNeighborhoodDeliveryFees().subscribe({
+      next: (fees) => this.neighborhoodFees.set(fees),
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.getApiErrorMessage(error, 'Nao foi possivel carregar as taxas por bairro.'));
+      },
+    });
   }
 
   private loadEstablishment(): void {

@@ -186,11 +186,6 @@
 
               <div class="form-grid">
                 <div class="field">
-                  <label for="est-delivery-fee">Taxa de entrega (R$)</label>
-                  <input id="est-delivery-fee" type="number" name="estDeliveryFee" min="0" step="0.01"
-                    [(ngModel)]="estForm.deliveryFee" placeholder="0,00" />
-                </div>
-                <div class="field">
                   <label for="est-preparation-time">Tempo de preparo (min)</label>
                   <input id="est-preparation-time" type="number" name="estPreparationTimeMinutes" min="5" max="240" step="1"
                     [(ngModel)]="estForm.preparationTimeMinutes" placeholder="30" />
@@ -279,6 +274,93 @@
             </div>
           </form>
         }
+      </section>
+
+      <section class="admin-section">
+        <div class="admin-section__header">
+          <div>
+            <h2>Taxas de Entrega por Bairro</h2>
+            <p>Configure taxas especificas por bairro. Quando o cliente informa o CEP, o bairro e detectado automaticamente e a taxa correspondente e aplicada. Se o bairro nao estiver cadastrado, vale a taxa padrao do estabelecimento.</p>
+          </div>
+          @if (!showNeighborhoodFeeForm()) {
+            <button type="button" class="primary-button" (click)="openAddNeighborhoodFee()">
+              <i class="fa fa-plus" aria-hidden="true"></i>
+              Adicionar bairro
+            </button>
+          }
+        </div>
+
+        @if (neighborhoodFeeSaved()) {
+          <div class="alert alert--success">
+            <i class="fa fa-circle-check" aria-hidden="true"></i>
+            Taxa salva com sucesso!
+          </div>
+        }
+
+        @if (showNeighborhoodFeeForm()) {
+          <form class="admin-form" (submit)="saveNeighborhoodFee(); $event.preventDefault()">
+            <div class="form-grid">
+              <div class="field">
+                <label for="nf-neighborhood">Bairro</label>
+                <input id="nf-neighborhood" type="text" name="nfNeighborhood"
+                  [(ngModel)]="neighborhoodFeeForm.neighborhood" placeholder="Nome do bairro" required />
+              </div>
+              <div class="field">
+                <label for="nf-fee">Taxa (R$)</label>
+                <input id="nf-fee" type="number" name="nfFee" min="0" step="0.01"
+                  [(ngModel)]="neighborhoodFeeForm.fee" placeholder="0,00" />
+              </div>
+              <div class="field field--wide">
+                <label class="toggle-label" for="nf-active">
+                  <input id="nf-active" type="checkbox" class="toggle-input" name="nfIsActive"
+                    [(ngModel)]="neighborhoodFeeForm.isActive" />
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  <span>{{ neighborhoodFeeForm.isActive ? 'Ativo' : 'Inativo' }}</span>
+                </label>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary-button">
+                <i class="fa fa-floppy-disk" aria-hidden="true"></i>
+                {{ editingNeighborhoodFeeId() !== null ? 'Salvar alteracoes' : 'Adicionar bairro' }}
+              </button>
+              <button type="button" class="secondary-button" (click)="cancelNeighborhoodFeeForm()">
+                Cancelar
+              </button>
+            </div>
+          </form>
+        }
+
+        <div class="product-list">
+          @if (neighborhoodFees().length === 0) {
+            <p class="empty-state">Nenhuma taxa por bairro cadastrada. A taxa padrao do estabelecimento sera aplicada a todos os pedidos.</p>
+          } @else {
+            @for (nf of neighborhoodFees(); track nf.id) {
+              <article class="product-item">
+                <div class="product-item__info">
+                  <strong class="product-item__name">{{ nf.neighborhood }}</strong>
+                  <span class="product-item__category">
+                    {{ nf.fee | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                    &bull;
+                    <span [class]="nf.isActive ? 'order-status order-status--entregue' : 'order-status order-status--cancelado'">
+                      {{ nf.isActive ? 'Ativo' : 'Inativo' }}
+                    </span>
+                  </span>
+                </div>
+                <div class="product-item__actions">
+                  <button type="button" class="edit-button" (click)="editNeighborhoodFee(nf)">
+                    <i class="fa fa-pen" aria-hidden="true"></i>
+                    Editar
+                  </button>
+                  <button type="button" class="delete-button" (click)="deleteNeighborhoodFee(nf.id)">
+                    <i class="fa fa-trash" aria-hidden="true"></i>
+                    Excluir
+                  </button>
+                </div>
+              </article>
+            }
+          }
+        </div>
       </section>
     }
 

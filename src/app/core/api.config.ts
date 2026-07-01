@@ -74,5 +74,9 @@ export function isProtectedApiRequest(url: string, method: string): boolean {
     return true;
   }
 
+  if (requestPath.startsWith('/NeighborhoodDeliveryFees')) {
+    return true;
+  }
+
   return false;
 }

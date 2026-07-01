@@ -289,16 +289,20 @@
             }
           </div>
 
+          @if (cart().length > 0 && (cartDeliveryFee() > 0 || isLoadingDeliveryEstimate())) {
+            <div class="cart-summary cart-summary--delivery">
+              <p><i class="fa fa-truck" aria-hidden="true"></i> Taxa de entrega</p>
+              @if (isLoadingDeliveryEstimate()) {
+                <span class="cart-summary__loading">Calculando...</span>
+              } @else {
+                <span>{{ cartDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+              }
+            </div>
+          }
           <div class="cart-summary">
             <p>Subtotal</p>
             <span>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
           </div>
-          @if (cart().length > 0 && cartDeliveryFee() > 0) {
-            <div class="cart-summary">
-              <p>Taxa de entrega</p>
-              <span>{{ cartDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
-            </div>
-          }
           <div class="cart-summary cart-summary--total">
             <p>Total</p>
             <strong>{{ cartGrandTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>
@@ -418,6 +422,12 @@
           @if (isLoadingZipCode()) {
             <p class="address-field__hint">Consultando CEP e montando o endereco...</p>
           }
+          @if (!isLoadingZipCode() && deliveryAddressParts?.neighborhood) {
+            <p class="address-field__hint">
+              <i class="fa fa-map-marker" aria-hidden="true"></i>
+              Bairro detectado: <strong>{{ deliveryAddressParts!.neighborhood }}</strong>
+            </p>
+          }
 
           @if (isLoadingDeliveryEstimate()) {
             <div class="cart-delivery-estimate cart-delivery-estimate--loading">
@@ -440,16 +450,20 @@
             <p class="address-field__warning">{{ deliveryEstimateError() }}</p>
           }
 
+          @if (cart().length > 0 && (cartDeliveryFee() > 0 || isLoadingDeliveryEstimate())) {
+            <div class="cart-summary cart-summary--delivery">
+              <p><i class="fa fa-truck" aria-hidden="true"></i> Taxa de entrega</p>
+              @if (isLoadingDeliveryEstimate()) {
+                <span class="cart-summary__loading">Calculando...</span>
+              } @else {
+                <span>{{ cartDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
+              }
+            </div>
+          }
           <div class="cart-summary">
             <p>Subtotal</p>
             <span>{{ cartTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
           </div>
-          @if (cart().length > 0 && cartDeliveryFee() > 0) {
-            <div class="cart-summary">
-              <p>Taxa de entrega</p>
-              <span>{{ cartDeliveryFee() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</span>
-            </div>
-          }
           <div class="cart-summary cart-summary--total">
             <p>Total</p>
             <strong>{{ cartGrandTotal() | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}</strong>

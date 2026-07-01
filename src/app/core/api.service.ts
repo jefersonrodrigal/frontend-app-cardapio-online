@@ -23,6 +23,8 @@ import {
   InventoryProductDto,
   LoginRequest,
   LoginResponse,
+  NeighborhoodDeliveryFeeDto,
+  NeighborhoodDeliveryFeePayload,
   NinetyNineFoodIntegrationDto,
   OrderDto,
   OrderTrackingDto,
@@ -181,12 +183,32 @@ export class ApiService {
     return this.http.post<OrderDto>(`${this.baseUrl}/Orders`, payload);
   }
 
-  getDeliveryEstimate(address: string, orderType = 'Entrega') {
-    const params = new HttpParams()
+  getDeliveryEstimate(address: string, orderType = 'Entrega', neighborhood?: string) {
+    let params = new HttpParams()
       .set('address', address)
       .set('orderType', orderType);
 
+    if (neighborhood) {
+      params = params.set('neighborhood', neighborhood);
+    }
+
     return this.http.get<DeliveryEstimateDto>(`${this.baseUrl}/Orders/estimate`, { params });
+  }
+
+  getNeighborhoodDeliveryFees() {
+    return this.http.get<NeighborhoodDeliveryFeeDto[]>(`${this.baseUrl}/NeighborhoodDeliveryFees`);
+  }
+
+  createNeighborhoodDeliveryFee(payload: NeighborhoodDeliveryFeePayload) {
+    return this.http.post<NeighborhoodDeliveryFeeDto>(`${this.baseUrl}/NeighborhoodDeliveryFees`, payload);
+  }
+
+  updateNeighborhoodDeliveryFee(id: number, payload: NeighborhoodDeliveryFeePayload) {
+    return this.http.put<NeighborhoodDeliveryFeeDto>(`${this.baseUrl}/NeighborhoodDeliveryFees/${id}`, payload);
+  }
+
+  deleteNeighborhoodDeliveryFee(id: number) {
+    return this.http.delete<void>(`${this.baseUrl}/NeighborhoodDeliveryFees/${id}`);
   }
 
   uploadImage(file: File) {

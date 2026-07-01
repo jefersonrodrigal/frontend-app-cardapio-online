@@ -58,7 +58,7 @@ export class Home implements OnDestroy {
   protected readonly isLoading = signal(true);
   protected readonly loadError = signal('');
   private lastDeliveryZipLookup = '';
-  private deliveryAddressParts: DeliveryAddressParts | null = null;
+  protected deliveryAddressParts: DeliveryAddressParts | null = null;
   private deliveryEstimateTimer: ReturnType<typeof setTimeout> | null = null;
   private deliveryEstimateSubscription?: Subscription;
   private deliveryEstimateRequestId = 0;
@@ -126,10 +126,8 @@ export class Home implements OnDestroy {
     effect(() => {
       const shouldEstimate =
         this.isCartOpen() &&
-        this.cartStep() === 2 &&
         this.cart().length > 0 &&
         this.deliveryZipCode().trim().length > 0 &&
-        this.deliveryNumber().trim().length > 0 &&
         this.address().trim().length > 0;
 
       if (!shouldEstimate) {
@@ -137,7 +135,7 @@ export class Home implements OnDestroy {
         return;
       }
 
-      this.scheduleDeliveryEstimate(this.address().trim());
+      this.scheduleDeliveryEstimate(this.address().trim(), this.deliveryAddressParts?.neighborhood);
     });
 
     this.restoreClientSession();
@@ -484,6 +482,7 @@ export class Home implements OnDestroy {
         })),
       })),
       trackingBaseUrl: globalThis.location?.origin ?? null,
+      neighborhood: this.deliveryAddressParts?.neighborhood || null,
     };
     const isAuthenticatedOrder = this.authenticatedClient() !== null;
 
@@ -608,11 +607,18 @@ export class Home implements OnDestroy {
     this.deliveryZipCode.set(client.zipCode);
     this.deliveryNumber.set(client.number);
     this.deliveryComplement.set(client.complement);
+    this.deliveryAddressParts = {
+      zipCode: client.zipCode,
+      street: client.street,
+      neighborhood: client.neighborhood,
+      city: client.city,
+      state: client.state,
+      complement: client.complement,
+    };
     this.address.set(client.fullAddress);
-    this.deliveryAddressParts = null;
   }
 
-  private scheduleDeliveryEstimate(address: string): void {
+  private scheduleDeliveryEstimate(address: string, neighborhood?: string): void {
     if (this.deliveryEstimateTimer) {
       clearTimeout(this.deliveryEstimateTimer);
     }
@@ -624,13 +630,14 @@ export class Home implements OnDestroy {
     const requestId = ++this.deliveryEstimateRequestId;
 
     this.deliveryEstimateTimer = setTimeout(() => {
-      this.deliveryEstimateSubscription = this.api.getDeliveryEstimate(address, 'Entrega').subscribe({
+      this.deliveryEstimateSubscription = this.api.getDeliveryEstimate(address, 'Entrega', neighborhood).subscribe({
         next: (estimate) => {
           if (requestId !== this.deliveryEstimateRequestId) {
             return;
           }
 
           this.deliveryEstimate.set(estimate);
+          this.cartService.deliveryFee.set(estimate.deliveryFee);
           this.deliveryEstimateError.set('');
           this.isLoadingDeliveryEstimate.set(false);
         },
@@ -659,6 +666,7 @@ export class Home implements OnDestroy {
     this.deliveryEstimate.set(null);
     this.deliveryEstimateError.set('');
     this.isLoadingDeliveryEstimate.set(false);
+    this.cartService.deliveryFee.set(0);
   }
 
   private formatZipCode(value: string): string {
@@ -710,7 +718,6 @@ export class Home implements OnDestroy {
     this.api.getEstablishment().subscribe({
       next: (establishment) => {
         this.establishment.set(establishment);
-        this.cartService.deliveryFee.set(establishment.deliveryFee ?? 0);
         done();
       },
       error: () => {

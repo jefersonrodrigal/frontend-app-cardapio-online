@@ -16,7 +16,6 @@ export interface EstablishmentDto {
   whatsapp: string;
   openTime: string;
   closeTime: string;
-  deliveryFee: number;
   sendOrderTrackingViaWhatsApp: boolean;
   preparationTimeMinutes: number;
   deliverySafetyMarginMinutes: number;
@@ -197,6 +196,20 @@ export interface DeliveryEstimateDto {
   estimatedDeliveryDistanceKm: number;
   estimatedReadyAt: string;
   estimatedDeliveryDeadlineAt: string;
+  deliveryFee: number;
+}
+
+export interface NeighborhoodDeliveryFeeDto {
+  id: number;
+  neighborhood: string;
+  fee: number;
+  isActive: boolean;
+}
+
+export interface NeighborhoodDeliveryFeePayload {
+  neighborhood: string;
+  fee: number;
+  isActive: boolean;
 }
 
 export interface ProductPayload {
@@ -247,6 +260,7 @@ export interface CreateOrderPayload {
   note?: string | null;
   orderType?: string | null;
   trackingBaseUrl?: string | null;
+  neighborhood?: string | null;
 }
 
 export interface CategoryDto {
